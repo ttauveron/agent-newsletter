@@ -55,6 +55,10 @@ user_message_id=$("${compose[@]}" exec -T postgres psql \
   -d "$POSTGRES_DB" \
   -tAc "select id from user_messages where gmail_message_id = 'user-1' and processing_state = 'user_message_received' limit 1")
 
+hermes_email_count=$("${compose[@]}" exec -T postgres psql \
+  "postgresql://$HERMES_DB_USER:$HERMES_DB_PASSWORD@localhost:5432/$POSTGRES_DB" \
+  -tAc "select count(*) from emails")
+
 if [[ "$newsletter_count" != "1" ]]; then
   echo "Expected newsletter-1 to be ingested, got count=$newsletter_count" >&2
   exit 1
@@ -62,6 +66,11 @@ fi
 
 if [[ -z "$user_message_id" ]]; then
   echo "Expected user-1 to be stored as a user message" >&2
+  exit 1
+fi
+
+if [[ "$hermes_email_count" != "1" ]]; then
+  echo "Expected hermes_readonly to read ingested emails, got count=$hermes_email_count" >&2
   exit 1
 fi
 
