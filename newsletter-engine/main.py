@@ -1,14 +1,15 @@
 import logging
-import os
 from contextlib import asynccontextmanager
 
 from anthropic import Anthropic
 from fastapi import FastAPI, HTTPException
 
+from api.dev_routes import create_dev_router
 from api.routes import create_router
 from config import load_settings, load_sources
 from db.session import get_session
-from gmail.client import GmailClient
+from gmail.factory import create_email_client
+from gmail.local_client import LocalEmailClient
 from gmail.poller import poll
 from processing.whitelist import WhitelistFilter
 from scheduler import create_scheduler, load_digest_config
@@ -19,9 +20,7 @@ logger = logging.getLogger(__name__)
 settings = load_settings()
 sources = load_sources()
 whitelist = WhitelistFilter(settings, sources)
-gmail_client = GmailClient(
-    token_path=os.environ.get("GMAIL_TOKEN_PATH", "/app/config/gmail_token.json")
-)
+gmail_client = create_email_client()
 anthropic_client = Anthropic()
 
 
@@ -44,6 +43,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Newsletter Engine", lifespan=lifespan)
 app.include_router(create_router(gmail_client, settings))
+if isinstance(gmail_client, LocalEmailClient):
+    app.include_router(create_dev_router(gmail_client))
 
 
 @app.get("/health")
