@@ -154,9 +154,11 @@ Le digest doit être court, utile et personnalisé. Il ne doit pas tout résumer
 
 L’utilisateur peut écrire directement à l’adresse email dédiée d’Hermès.
 
-Si un email reçu provient de l’adresse email personnelle autorisée de l’utilisateur, le `newsletter-engine` ne le traite pas comme une newsletter.
+Si un email reçu provient de l’adresse email personnelle autorisée de l’utilisateur, le `newsletter-engine` le traite par défaut comme une demande conversationnelle.
 
-Il déclenche un workflow spécifique :
+Exception : si le sujet commence par un préfixe de transfert courant (`Fwd:`, `FW:`, `Tr:`, `Transf:`, `WG:`), l’email doit être considéré comme une newsletter transférée par l’utilisateur. La v1 ne cherche pas à gérer les préfixes imbriqués ni à construire un mécanisme plus complexe : cette heuristique sert seulement à éviter de confondre un transfert évident avec une conversation.
+
+Il déclenche alors le traitement conversationnel :
 
 ```text
 1. Newsletter-engine reçoit un email.

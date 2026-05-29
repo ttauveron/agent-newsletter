@@ -140,6 +140,26 @@ Le système utilise une seule adresse Gmail dédiée pour :
 
 Les emails provenant de l’adresse personnelle autorisée de l’utilisateur sont traités comme des messages conversationnels.
 
+Exception : si un email provenant de l’adresse personnelle autorisée ressemble à un transfert de newsletter, il doit être traité comme une newsletter transférée plutôt que comme une conversation.
+
+La détection reste volontairement simple pour la v1 :
+
+* regarder uniquement le début du sujet ;
+* considérer comme transfert les sujets qui commencent par un préfixe courant suivi de `:` ;
+* préfixes retenus : `Fwd`, `FW`, `Tr`, `Transf`, `WG` ;
+* ne pas gérer les préfixes imbriqués ou récursifs dans la première version.
+
+Exemples reconnus :
+
+```text
+Fwd: Weekly Security Brief
+FW: Cloud newsletter
+Tr: Bulletin cyber
+WG: Sicherheitsbericht
+```
+
+Cette règle sert uniquement à router le message. L’extraction de la source réelle à partir du corps du transfert pourra être ajoutée ensuite, mais elle ne fait pas partie de cette décision.
+
 Les emails provenant d’expéditeurs whitelistés sont traités comme newsletters.
 
 Les emails provenant d’expéditeurs non whitelistés sont laissés non lus et ne sont pas traités.
