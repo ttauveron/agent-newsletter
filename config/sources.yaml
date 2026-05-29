@@ -1,0 +1,6 @@
+sources:
+  - match: "example@newsletter.com"
+    category: "cloud_security"
+
+  - match_domain: "linkedin.com"
+    category: "market_signal"

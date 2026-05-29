@@ -1,0 +1,13 @@
+.env
+config/gmail_token.json
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+.DS_Store
+postgres_data/
