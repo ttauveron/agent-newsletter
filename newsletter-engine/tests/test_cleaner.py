@@ -1,6 +1,5 @@
 from processing.cleaner import clean_content, clean_html
 
-
 # --- plain text ---
 
 def test_plain_text_passthrough():

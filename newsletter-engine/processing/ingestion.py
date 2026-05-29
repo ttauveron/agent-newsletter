@@ -33,7 +33,9 @@ def ingest_newsletter(
     session.add(email)
 
     transition_state(session, "email", email_id, EmailState.received)
-    transition_state(session, "email", email_id, EmailState.ingested, from_state=EmailState.received)
+    transition_state(
+        session, "email", email_id, EmailState.ingested, from_state=EmailState.received
+    )
     transition_state(session, "email", email_id, EmailState.cleaned, from_state=EmailState.ingested)
     audit(
         session,

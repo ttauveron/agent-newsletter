@@ -1,4 +1,3 @@
-import pytest
 
 from config import EmailConfig, Settings, SourceRule, SourcesConfig
 from processing.whitelist import EmailAction, WhitelistFilter

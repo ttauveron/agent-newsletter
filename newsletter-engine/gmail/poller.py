@@ -71,4 +71,6 @@ def _process_message(
         ingest_newsletter(parsed, result, session)
         client.mark_as_read(message_id)
         stats["newsletters"] += 1
-        logger.info("Newsletter: %s from %s [%s]", parsed.subject, parsed.sender_email, result.category)
+        logger.info(
+            "Newsletter: %s from %s [%s]", parsed.subject, parsed.sender_email, result.category
+        )
