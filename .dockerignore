@@ -1,0 +1,10 @@
+newsletter-engine/.venv
+newsletter-engine/__pycache__
+newsletter-engine/.pytest_cache
+newsletter-engine/.ruff_cache
+**/__pycache__
+**/*.pyc
+.env
+config/client_secret.json
+config/gmail_token.json
+secrets.txt

@@ -25,9 +25,9 @@ services:
     environment:
       DATABASE_URL: postgresql://${NEWSLETTER_ENGINE_DB_USER}:${NEWSLETTER_ENGINE_DB_PASSWORD}@postgres:5432/${POSTGRES_DB}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
-      GMAIL_CLIENT_ID: ${GMAIL_CLIENT_ID}
-      GMAIL_CLIENT_SECRET: ${GMAIL_CLIENT_SECRET}
+      GMAIL_CLIENT_SECRET_PATH: ${GMAIL_CLIENT_SECRET_PATH:-/app/config/client_secret.json}
       GMAIL_TOKEN_PATH: ${GMAIL_TOKEN_PATH:-/app/config/gmail_token.json}
+      GMAIL_AUTH_PORT: ${GMAIL_AUTH_PORT:-8888}
       HERMES_WEBHOOK_URL: http://hermes:8644
       NEWSLETTER_ENGINE_URL: http://newsletter-engine:8000
     depends_on:

@@ -1,5 +1,7 @@
 .env
 config/gmail_token.json
+config/client_secret.json
+secrets.txt
 __pycache__/
 *.pyc
 *.pyo
