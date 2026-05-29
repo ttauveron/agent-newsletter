@@ -10,7 +10,7 @@ from db.session import get_session
 from gmail.client import GmailClient
 from gmail.poller import poll
 from processing.whitelist import WhitelistFilter
-from scheduler import create_scheduler
+from scheduler import create_scheduler, load_digest_config
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -26,13 +26,14 @@ anthropic_client = Anthropic()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    scheduler = create_scheduler(settings, gmail_client, whitelist, anthropic_client)
-    scheduler.start()
-    logger.info(
-        "Scheduler started (digest at %s %s)",
-        settings.digest.schedule,
-        settings.digest.timezone,
+    with get_session() as session:
+        digest_schedule, digest_timezone = load_digest_config(session)
+    scheduler = create_scheduler(
+        digest_schedule, digest_timezone, gmail_client, whitelist, anthropic_client
     )
+    app.state.scheduler = scheduler
+    scheduler.start()
+    logger.info("Scheduler started (digest at %s %s)", digest_schedule, digest_timezone)
     yield
     scheduler.shutdown(wait=False)
     logger.info("Scheduler stopped")

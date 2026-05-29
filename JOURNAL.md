@@ -77,6 +77,22 @@ Référence principale : [PLAN.md](PLAN.md) | [SPECS.md](SPECS.md) | [decisions_
 
 ---
 
+## Phase 2c-bis — Migration app_settings + scheduler depuis DB ✅
+
+### Ce qui est en place
+
+- **Migration `002_app_settings.py`** : table `app_settings` (key PK, value, updated_at). Valeurs initiales : `digest_schedule=07:00`, `digest_timezone=Europe/Zurich`. GRANT SELECT à `hermes_readonly`.
+- **`db/models.py`** : modèle `AppSetting` ajouté.
+- **`scheduler.py`** :
+  - `load_digest_config(session)` : lit `digest_schedule` et `digest_timezone` depuis `app_settings`, fallback sur les defaults si absents.
+  - `reschedule_digest(scheduler, schedule, timezone)` : reschedule le job `daily_digest` à chaud via `scheduler.reschedule_job()`.
+  - `create_scheduler(digest_schedule, digest_timezone, ...)` : signature mise à jour (plus de `settings` passé).
+  - `_wake_hermes` : URL webhook construite comme `{HERMES_URL}/webhooks/{event}` (ex: `/webhooks/daily-digest`, `/webhooks/user-message`).
+- **`main.py`** : lit la config depuis DB au démarrage via `load_digest_config`, stocke le scheduler sur `app.state.scheduler` pour que les routes puissent reschedule.
+- **Tests** : 3 nouveaux tests (`load_digest_config` happy path + fallbacks, `reschedule_digest`), tests existants mis à jour pour la nouvelle signature.
+
+---
+
 ## Phase 2c — Scheduler ✅
 
 **Commits** : à venir

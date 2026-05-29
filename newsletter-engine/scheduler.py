@@ -7,9 +7,9 @@ from anthropic import Anthropic
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 
-from config import Settings
-from db.models import Digest, DigestState, UserMessage, UserMessageState
+from db.models import AppSetting, Digest, DigestState, UserMessage, UserMessageState
 from db.session import get_session
 from gmail.client import GmailClient
 from gmail.poller import poll as gmail_poll
@@ -20,15 +20,36 @@ logger = logging.getLogger(__name__)
 POLL_INTERVAL_MINUTES = 5
 
 
+def load_digest_config(session: Session) -> tuple[str, str]:
+    """Return (digest_schedule, digest_timezone) from app_settings, with fallbacks."""
+
+    def _get(key: str, default: str) -> str:
+        row = session.execute(select(AppSetting).where(AppSetting.key == key)).scalar_one_or_none()
+        return row.value if row else default
+
+    return _get("digest_schedule", "07:00"), _get("digest_timezone", "Europe/Zurich")
+
+
+def reschedule_digest(scheduler: AsyncIOScheduler, schedule: str, timezone: str) -> None:
+    hour, minute = map(int, schedule.split(":"))
+    scheduler.reschedule_job(
+        "daily_digest",
+        trigger=CronTrigger(hour=hour, minute=minute, timezone=timezone),
+    )
+    logger.info("Digest rescheduled to %s %s", schedule, timezone)
+
+
 async def _wake_hermes(payload: dict) -> None:
     hermes_url = os.environ.get("HERMES_URL", "http://hermes:8642")
+    event = payload.get("event", "unknown")
+    endpoint = f"{hermes_url}/webhooks/{event}"
     try:
         async with httpx.AsyncClient() as client:
-            r = await client.post(f"{hermes_url}/api/trigger", json=payload, timeout=10)
+            r = await client.post(endpoint, json=payload, timeout=10)
             r.raise_for_status()
-            logger.info("Hermes woken: event=%s", payload.get("event"))
+            logger.info("Hermes woken: event=%s", event)
     except Exception:
-        logger.exception("Failed to wake Hermes (event=%s)", payload.get("event"))
+        logger.exception("Failed to wake Hermes (event=%s)", event)
 
 
 async def _run_daily_digest() -> None:
@@ -44,7 +65,7 @@ async def _run_daily_digest() -> None:
             return
         session.add(Digest(digest_date=today, processing_state=DigestState.digest_due))
     logger.info("Digest created for %s, notifying Hermes", today)
-    await _wake_hermes({"event": "daily_digest_due", "date": str(today)})
+    await _wake_hermes({"event": "daily-digest", "date": str(today)})
 
 
 async def _run_gmail_poll(
@@ -73,25 +94,28 @@ async def _check_user_messages() -> None:
         )
         for msg in msgs:
             msg.processing_state = UserMessageState.passed_to_hermes
-            pending.append({"message_id": str(msg.id), "subject": msg.subject})
+            pending.append(
+                {"event": "user-message", "message_id": str(msg.id), "subject": msg.subject}
+            )
     if pending:
         logger.info("Forwarding %d user message(s) to Hermes", len(pending))
     for item in pending:
-        await _wake_hermes({"event": "user_message", **item})
+        await _wake_hermes(item)
 
 
 def create_scheduler(
-    settings: Settings,
+    digest_schedule: str,
+    digest_timezone: str,
     gmail_client: GmailClient,
     whitelist: WhitelistFilter,
     anthropic_client: Anthropic,
 ) -> AsyncIOScheduler:
     scheduler = AsyncIOScheduler()
 
-    hour, minute = map(int, settings.digest.schedule.split(":"))
+    hour, minute = map(int, digest_schedule.split(":"))
     scheduler.add_job(
         _run_daily_digest,
-        CronTrigger(hour=hour, minute=minute, timezone=settings.digest.timezone),
+        CronTrigger(hour=hour, minute=minute, timezone=digest_timezone),
         id="daily_digest",
         name="Daily digest trigger",
         misfire_grace_time=300,
