@@ -203,6 +203,15 @@ Référence principale : [PLAN.md](PLAN.md) | [SPECS.md](SPECS.md) | [decisions_
 - Remplir `sources.yaml` avec les vraies sources newsletter.
 - Documenter le format attendu par Hermes pour lire ces fichiers.
 
+## Tests end-to-end locaux ⏳ En cours
+
+### Issue #2 — Scénario Docker avec mailbox locale
+
+- **`docker-compose.e2e.yml`** : active `EMAIL_BACKEND=local`, `ENRICHMENT_BACKEND=local` et une mailbox fichier dans le conteneur `newsletter-engine`.
+- **`config/e2e/`** : configuration déterministe pour lancer le pipeline sans Gmail.
+- **`scripts/e2e-local-mailbox.sh`** : démarre Postgres + newsletter-engine, injecte une newsletter et un message utilisateur, déclenche `/trigger/poll`, vérifie la DB puis l'outbox locale.
+- **`README.md`** : documente la commande e2e locale.
+
 ---
 
 ## Phase 5 — Sécurité & observabilité ⏳ Partielle

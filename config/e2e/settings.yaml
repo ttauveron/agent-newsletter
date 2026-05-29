@@ -1,0 +1,10 @@
+digest:
+  schedule: "07:00"
+  timezone: "Europe/Zurich"
+
+email:
+  hermes_address: "hermes@example.com"
+  authorized_user_address: "user@example.com"
+
+web:
+  allowed_domains: []

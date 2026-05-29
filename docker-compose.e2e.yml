@@ -1,0 +1,14 @@
+services:
+  newsletter-engine:
+    environment:
+      EMAIL_BACKEND: local
+      ENRICHMENT_BACKEND: local
+      LOCAL_MAILBOX_DIR: /app/mailbox
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-dummy-e2e-key}
+      HERMES_WEBHOOK_URL: http://127.0.0.1:9
+    volumes:
+      - ./config/e2e:/app/config:ro
+      - e2e_mailbox:/app/mailbox
+
+volumes:
+  e2e_mailbox:
