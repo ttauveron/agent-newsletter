@@ -17,47 +17,82 @@ La défense principale est le confinement :
 ---
 ### Accès d’Hermès aux données
 
-**Décision révisée** : Hermès est implémenté via [Hermes Agent](https://github.com/NousResearch/hermes-agent) (NousResearch). Il n’accède pas directement à Postgres — il passe par des endpoints HTTP exposés par le `newsletter-engine`.
+**Décision finale** : Hermès accède directement à Postgres via le rôle `hermes_readonly`. Hermes Agent dispose d’outils natifs (terminal, Python) qui lui permettent d’exécuter des requêtes SQL. Le newsletter-engine ne fait pas d’intermédiaire pour les lectures.
 
-Ce changement par rapport à la décision initiale (accès SQL direct) est motivé par le fait que Hermes Agent communique avec ses outils via des appels HTTP, pas via des connexions DB directes. Le `newsletter-engine` expose un endpoint `GET /hermes/query` qui accepte une requête en langage naturel ou structurée et retourne les données pertinentes.
-
-Hermès peut répondre aux mêmes questions analytiques qu’avant :
-
-* combien d’articles ont été résumés sur une période ;
-* quelles sources produisent le plus de signaux utiles ;
-* quels sujets reviennent le plus souvent ;
-* quelles différences apparaissent entre deux périodes ;
-* quels contenus ont été ignorés ou inclus dans les digests.
+On lui fournit le schéma complet des tables métier (`emails`, `summaries`, `digests`, `user_messages`, `audit_logs`) et il se débrouille pour construire ses requêtes.
 
 Compromis :
 
-* gain : contrôle total sur ce qu’Hermès peut voir et faire ;
-* gain : validation et rate limiting côté newsletter-engine ;
-* gain : compatible avec l’architecture tool-based de Hermes Agent ;
-* sacrifice : plus d’API à maintenir dans le newsletter-engine ;
-* sacrifice : moins de flexibilité ad hoc pour les requêtes analytiques complexes.
+* gain : aucun endpoint de query à maintenir dans le newsletter-engine ;
+* gain : flexibilité maximale pour les requêtes analytiques complexes ;
+* gain : Hermès peut itérer sur ses requêtes de manière autonome ;
+* garde-fou principal : rôle `hermes_readonly` strictement en lecture, jamais accès aux tables internes sensibles.
 
-Garde-fous minimaux :
+### Réveil d’Hermès
 
-* rôle Postgres strictement read-only ;
-* accès limité aux tables métier, jamais aux secrets ;
-* timeout SQL ;
-* limite de taille sur les résultats retournés ;
-* logs des requêtes ou au moins des intentions de requêtes ;
-* interdiction des écritures directes en base par Hermès.
+**Mécanisme** : Hermes Agent expose nativement un **webhook platform** configurable dans `hermes/config.yaml`. Newsletter-engine ne POSTe pas sur un endpoint générique mais sur des routes nommées qui ont chacune un template de prompt pré-configuré.
+
+Deux webhooks configurés :
+
+```
+POST http://hermes:8642/webhooks/daily-digest   → inject: { date, email_count }
+POST http://hermes:8642/webhooks/user-message   → inject: { message_id, subject, content }
+```
+
+Les données JSON sont injectées dans les templates de prompt via des variables (`{date}`, `{subject}`, etc.). Hermes Agent expose aussi `POST /v1/runs` (async avec SSE) et `POST /v1/chat/completions` (OpenAI-compatible) si besoin d’appels directs.
+
+Compromis :
+
+* gain : la logique du prompt est dans la config Hermes, pas dans newsletter-engine ;
+* gain : facile d’ajouter de nouveaux événements sans toucher newsletter-engine ;
+* sacrifice : nécessite de maintenir `hermes/config.yaml`.
 
 ### Usage de Python par Hermès
 
-Hermès peut utiliser Python pour analyser les résultats de requêtes s’il en a besoin.
-
-Cet usage doit rester orienté analyse locale : agrégation, nettoyage de données, comparaison de périodes, préparation d’un résumé.
+Hermès peut utiliser Python (via ses outils natifs) pour analyser les résultats de requêtes SQL : agrégation, comparaison de périodes, préparation d’un résumé. C’est un outil natif de Hermes Agent, pas quelque chose à implémenter.
 
 Compromis :
 
-* gain : Hermès peut faire des analyses plus riches que du SQL simple ;
-* gain : meilleure flexibilité pour les questions exploratoires ;
-* sacrifice : Python devient une capacité puissante qui doit être encadrée ;
-* risque : accès filesystem, réseau ou exécution non désirée si le sandbox n’est pas clair.
+* gain : analyses plus riches que du SQL simple ;
+* gain : flexibilité pour les questions exploratoires ;
+* risque : exécution Python dans le conteneur Hermes — confinement réseau et filesystem important (Phase 5).
+
+### Accès web
+
+Hermès utilise ses outils natifs de web fetch/search. Le contrôle des domaines autorisés est géré au niveau réseau Docker (iptables ou proxy sortant), pas via un endpoint newsletter-engine.
+
+Compromis :
+
+* gain : plus simple, aucun endpoint `/hermes/fetch-web` à maintenir ;
+* gain : Hermès accède directement sans latence intermédiaire ;
+* sacrifice : whitelist gérée en config infrastructure plutôt qu’en code — moins flexible à chaud ;
+* garde-fou : règles réseau Docker strictes (Phase 5).
+
+### Settings runtime en base de données
+
+Les paramètres modifiables à chaud (heure du digest, fuseau, etc.) sont stockés dans une table `app_settings` en DB plutôt que dans `settings.yaml`.
+
+Hermès peut lire ces settings via SQL (rôle `hermes_readonly`). Pour les modifier, il passe par `POST /hermes/preferences` sur newsletter-engine — qui écrit en DB **et** applique le changement à chaud (ex : reschedule APScheduler).
+
+`settings.yaml` reste pour la configuration statique (adresses email, sources whitelist) qui ne change pas en cours d’exécution.
+
+Compromis :
+
+* gain : Hermès peut lire l’état courant des settings sans endpoint dédié ;
+* gain : les modifications persistent sans redémarrage ;
+* sacrifice : migration DB nécessaire pour ajouter un setting.
+
+### Endpoints newsletter-engine exposés à Hermès
+
+Liste finale, après révisions :
+
+| Endpoint | Rôle | Garde-fous |
+|---|---|---|
+| `POST /actions/send-digest` | Envoie le digest par email + marque `digest_sent` | Destinataire = `authorized_user_address` |
+| `POST /actions/send-reply` | Répond à un `UserMessage` + marque `answered` | Idem |
+| `POST /hermes/preferences` | Met à jour `app_settings` en DB et/ou fichiers Markdown | Diff journalisé, clés autorisées uniquement |
+
+Tout le reste (lecture des emails, requêtes analytiques, accès web) est fait directement par Hermès via ses outils natifs.
 
 ### Configuration utilisateur
 

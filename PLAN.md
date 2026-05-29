@@ -66,24 +66,32 @@ Hermes Agent est un projet open-source de NousResearch. Il fonctionne avec n'imp
 - Extraction de tags et catégorie (ou règles déterministes si suffisant)
 - Transitions : `cleaned → summarized → ready_for_hermes`
 
-### 2c — Scheduler
+### 2c — Scheduler ✅
 
-- APScheduler intégré dans newsletter-engine
-- Événement `daily_digest_due` déclenché à l'heure configurée
-- Détection des messages utilisateur (expéditeur = adresse personnelle autorisée)
+- APScheduler intégré dans newsletter-engine (AsyncIOScheduler, lifespan FastAPI)
+- Job `daily_digest` : CronTrigger selon `app_settings.digest_schedule` en DB
+- Job `gmail_poll` : toutes les 5 minutes
+- Job `check_user_messages` : toutes les minutes, détecte les `UserMessage` non traités
+- `_wake_hermes()` : POST sur les webhooks Hermes configurés
+
+### 2c-bis — Migration settings en DB
+
+- Ajouter table `app_settings` (clé/valeur) via migration Alembic
+- Valeurs initiales : `digest_schedule`, `digest_timezone`
+- Mettre à jour le scheduler pour lire depuis DB au démarrage
+- Endpoint `POST /hermes/preferences` peut reschedule le job à chaud
 
 ### 2d — API interne (FastAPI)
 
 Endpoints appelables par Hermès uniquement (réseau Docker interne) :
 
-| Endpoint | Rôle |
-|---|---|
-| `POST /actions/send-email` | Envoi email avec validation du destinataire |
-| `POST /actions/mark-digest-sent` | Mise à jour état digest |
-| `POST /actions/update-processing-state` | Transition d'état sur un email |
-| `POST /trigger/hermes` | Wake-up d'Hermès |
+| Endpoint | Rôle | Garde-fous |
+|---|---|---|
+| `POST /actions/send-digest` | Envoie le digest + marque `digest_sent` | Destinataire = `authorized_user_address` |
+| `POST /actions/send-reply` | Répond à un `UserMessage` + marque `answered` | Idem |
+| `POST /hermes/preferences` | Met à jour `app_settings` DB et/ou Markdown config | Clés autorisées, diff journalisé, reschedule si besoin |
 
-Le newsletter-engine valide chaque action avant exécution (ex : destinataire forcément l'utilisateur autorisé).
+Newsletter-engine valide chaque action. Hermès lit les données directement en DB via `hermes_readonly`.
 
 ---
 
@@ -93,46 +101,43 @@ Le newsletter-engine valide chaque action avant exécution (ex : destinataire fo
 
 ### 3a — Déploiement de Hermes Agent
 
-Hermes Agent (NousResearch) remplace un agent Claude custom. Il est déployé comme service Docker et configuré pour :
+Hermes Agent (NousResearch) déployé via image Docker `nousresearch/hermes-agent:latest`, configuré via `hermes/config.yaml` :
 
-- **Provider LLM** : n'importe quel endpoint OpenAI-compatible (configurable via `.env`)
-- **Mémoire** : Postgres (rôle `hermes_readonly` pour les données métier)
-- **Outils** : endpoints HTTP exposés par le newsletter-engine
+- **Provider LLM** : endpoint OpenAI-compatible (configurable via `.env`)
+- **DB** : connexion directe Postgres avec rôle `hermes_readonly` — Hermès lit les emails, summaries, digests, settings via SQL
+- **Web** : outils natifs Hermes, domaines restreints par règles réseau Docker
+- **Webhooks** : deux routes configurées dans `hermes/config.yaml`
 
-Les outils exposés par le newsletter-engine pour Hermes Agent :
+```yaml
+# hermes/config.yaml (schéma indicatif)
+webhooks:
+  daily-digest:
+    prompt: "Il est {date}. Génère le digest journalier. Emails disponibles : requête DB ready_for_hermes..."
+  user-message:
+    prompt: "L'utilisateur a envoyé : '{content}' (sujet: {subject}). Traite ce message..."
+```
 
-| Endpoint | Rôle | Garde-fous |
-|---|---|---|
-| `GET /hermes/emails` | Emails `ready_for_hermes` avec résumés | Read-only, paginé |
-| `GET /hermes/query` | Requête SQL read-only | Timeout 10s, limite résultats |
-| `POST /hermes/fetch-web` | Récupération contenu web | Domaines whitelistés uniquement |
-| `POST /actions/send-email` | Envoi email | Destinataire validé côté newsletter-engine |
-| `POST /actions/mark-digest-sent` | Mise à jour état digest | — |
-| `GET /hermes/preferences` | Lecture fichiers Markdown config | — |
-| `POST /hermes/preferences` | Modification fichiers Markdown config | Diff journalisé |
+Newsletter-engine POSTe sur `http://hermes:8642/webhooks/daily-digest` ou `/webhooks/user-message` avec les données JSON correspondantes.
 
 ### 3b — Flux digest journalier
 
 ```
-1. Newsletter-engine réveille Hermès (digest_due)
-2. Hermès interroge les emails ready_for_hermes
-3. Hermès lit les préférences utilisateur
-4. Hermès sélectionne ce qui mérite d'être communiqué
-5. Hermès génère le digest personnalisé
-6. Hermès appelle call_engine_api → send-email
-7. Hermès journalise chaque décision (inclus/ignoré + raison)
-8. Newsletter-engine marque le digest sent
+1. Scheduler newsletter-engine → POST /webhooks/daily-digest sur Hermes
+2. Hermès interroge DB directement (SELECT emails + summaries WHERE ready_for_hermes)
+3. Hermès lit app_settings, user_profile.md, digest_style.md, learned_preferences.md
+4. Hermès sélectionne et génère le digest personnalisé
+5. Hermès → POST /actions/send-digest → newsletter-engine envoie + marque digest_sent
+6. Hermès journalise ses décisions (inclus/ignoré + raison) via SQL ou audit log
 ```
 
 ### 3c — Flux conversationnel
 
 ```
-1. Newsletter-engine détecte email de l'utilisateur autorisé
-2. Newsletter-engine réveille Hermès avec le message
-3. Hermès interprète : question analytique, feedback, changement de config
-4. Hermès répond via call_engine_api → send-email
-5. Hermès consolide le feedback dans les Markdown si pertinent
-6. Action journalisée
+1. Scheduler newsletter-engine détecte UserMessage non traité
+2. Newsletter-engine → POST /webhooks/user-message sur Hermes
+3. Hermès interprète : question analytique → SQL, feedback → Markdown, config → POST /hermes/preferences
+4. Hermès → POST /actions/send-reply → newsletter-engine envoie la réponse
+5. Action journalisée
 ```
 
 Exemples de messages supportés :
@@ -140,7 +145,7 @@ Exemples de messages supportés :
 - `"Ignore les annonces produit trop marketing."` → mise à jour `learned_preferences.md`
 - `"Je veux plus de signaux liés à IAM."` → mise à jour `user_profile.md`
 - `"Quels sujets reviennent le plus depuis six mois ?"` → requête SQL analytique
-- `"Change le digest quotidien à 08:00."` → mise à jour `settings.yaml`
+- `"Change le digest quotidien à 08:00."` → `POST /hermes/preferences` → DB + reschedule
 
 ---
 

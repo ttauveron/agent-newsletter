@@ -100,34 +100,28 @@ Référence principale : [PLAN.md](PLAN.md) | [SPECS.md](SPECS.md) | [decisions_
 
 ---
 
-## Phase 2d — API interne FastAPI ⏳ Partielle
+## Phase 2d — API interne FastAPI ⏳ À faire
 
-**Objectif** : endpoints appelables par Hermes (réseau Docker interne uniquement).
+**Objectif** : les 3 endpoints que Hermes peut appeler sur newsletter-engine. Hermes lit les données directement en DB — pas d'endpoint de query.
 
 ### Ce qui existe déjà
 
 - `GET /health`
-- `POST /trigger/poll` (déclenchement manuel du polling Gmail)
+- `POST /trigger/poll`
 
-### Endpoints manquants (pour Hermes)
+### Endpoints à implémenter
 
-| Endpoint | Rôle | Notes |
+| Endpoint | Rôle | Garde-fous |
 |---|---|---|
-| `GET /hermes/emails` | Emails `ready_for_hermes` avec résumés | Paginé, read-only |
-| `GET /hermes/query` | Requête analytique sur les données | Timeout, limite résultats |
-| `POST /hermes/fetch-web` | Fetch contenu web | Domaines whitelistés (`settings.web.allowed_domains`) |
-| `POST /actions/send-email` | Envoi email via Gmail | Destinataire forcément `authorized_user_address` |
-| `POST /actions/mark-digest-sent` | Mise à jour état digest → `digest_sent` | — |
-| `POST /actions/update-processing-state` | Transition d'état sur un email | Valider les transitions autorisées |
-| `GET /hermes/preferences` | Lecture des fichiers Markdown config | — |
-| `POST /hermes/preferences` | Écriture fichiers Markdown config | Journaliser le diff |
-| `POST /trigger/hermes` | Wake-up Hermes | Appel HTTP vers `HERMES_URL` |
+| `POST /actions/send-digest` | Envoie le digest + marque `digest_sent` | `to` == `authorized_user_address` |
+| `POST /actions/send-reply` | Répond à un `UserMessage` + marque `answered` | Idem |
+| `POST /hermes/preferences` | Met à jour `app_settings` DB et/ou Markdown | Clés autorisées, diff journalisé, reschedule si besoin |
 
 ### Points d'attention
 
-- Tous les endpoints Hermes doivent valider les actions avant exécution (guard-rails côté newsletter-engine).
-- `POST /actions/send-email` : valider que `to` == `authorized_user_address` (défense prompt injection).
-- Factoriser dans `api/routes.py` (fichier à créer).
+- Nécessite la migration `app_settings` en DB (voir 2c-bis) pour que `POST /hermes/preferences` puisse modifier le schedule.
+- `send-digest` prend un `digest_id` pour retrouver l'enregistrement et le marquer.
+- Factoriser dans `newsletter-engine/api/routes.py`.
 
 ---
 
@@ -135,34 +129,35 @@ Référence principale : [PLAN.md](PLAN.md) | [SPECS.md](SPECS.md) | [decisions_
 
 **Répertoire `hermes/`** : vide pour l'instant.
 
+### Ce qu'on sait sur Hermes Agent (NousResearch)
+
+- Expose `POST /v1/chat/completions` (OpenAI-compatible), `POST /v1/runs` (async SSE), et un **webhook platform**.
+- Le webhook platform est la bonne approche : routes nommées dans `hermes/config.yaml`, newsletter-engine POSTe des données JSON, Hermes injecte les variables dans un template de prompt.
+- Dispose d'outils natifs : terminal, Python exec, web fetch/search — aucun outil custom à implémenter côté newsletter-engine pour la lecture de données.
+- Authentification API via `API_SERVER_KEY`.
+
 ### 3a — Déploiement Hermes Agent
 
-- Hermes Agent est un projet NousResearch déployé via l'image Docker `nousresearch/hermes-agent:latest`.
-- La commande dans docker-compose est `gateway run` (à vérifier avec la doc Hermes Agent).
-- À configurer : provider LLM (endpoint OpenAI-compatible), outils HTTP vers newsletter-engine.
-- Variables d'environnement : `DATABASE_URL` (hermes_readonly), `NEWSLETTER_ENGINE_URL`.
-- Pas de code custom Python dans `hermes/` — configuration uniquement.
+- Créer `hermes/config.yaml` avec : provider LLM, connexion DB (`hermes_readonly`), webhooks `daily-digest` et `user-message`, outils autorisés.
+- Mettre à jour `scheduler.py` pour utiliser les bons endpoints webhook (`/webhooks/daily-digest`, `/webhooks/user-message`).
+- Variables d'environnement dans `.env` : `API_SERVER_KEY`, provider LLM key.
 
-### 3b — Flux digest journalier
+### 3b — Flux digest journalier (révisé)
 
 ```
-newsletter-engine (scheduler) → POST /trigger/hermes
-  → Hermes interroge GET /hermes/emails
-  → Hermes lit GET /hermes/preferences
-  → Hermes génère digest
-  → Hermes appelle POST /actions/send-email
-  → Hermes appelle POST /actions/mark-digest-sent
-  → Audit logs
+1. Scheduler → POST /webhooks/daily-digest { date }
+2. Hermes → SQL SELECT emails + summaries WHERE ready_for_hermes
+3. Hermes → SQL SELECT app_settings + lit Markdown config
+4. Hermes génère le digest
+5. Hermes → POST /actions/send-digest → newsletter-engine envoie + marque digest_sent
 ```
 
-### 3c — Flux conversationnel
+### 3c — Flux conversationnel (révisé)
 
 ```
-UserMessage en DB (state: user_message_received)
-  → newsletter-engine réveille Hermes avec contexte
-  → Hermes interprète + répond
-  → POST /actions/send-email
-  → Optionnel : POST /hermes/preferences (feedback → mémoire Markdown)
+1. Scheduler → POST /webhooks/user-message { message_id, subject, content }
+2. Hermes interprète → SQL si analytique, POST /hermes/preferences si config/feedback
+3. Hermes → POST /actions/send-reply → newsletter-engine envoie la réponse
 ```
 
 ---
@@ -206,7 +201,7 @@ UserMessage en DB (state: user_message_received)
 
 ## Prochaine étape recommandée
 
-**Phase 2d** : créer `newsletter-engine/api/routes.py` avec les endpoints Hermes (send-email, mark-digest-sent, update-processing-state, hermes/emails, hermes/preferences, etc.). Ensuite Phase 3a : configuration Hermes Agent.
+**2c-bis** : migration `app_settings` en DB + mise à jour scheduler. Puis **2d** : les 3 endpoints (`send-digest`, `send-reply`, `preferences`). Puis **3a** : `hermes/config.yaml` + test des webhooks end-to-end.
 
 ---
 
@@ -214,11 +209,12 @@ UserMessage en DB (state: user_message_received)
 
 Voir [decisions_architecture.md](decisions_architecture.md) pour le détail complet. Résumé :
 
-- Hermes passe par des endpoints HTTP (pas d'accès SQL direct) — plus de contrôle, plus d'API à maintenir.
-- Python exec disponible pour Hermes pour l'analyse locale des résultats.
-- Hermes modifie directement les Markdown de préférences (avec journal de diff).
+- Hermes accède directement à Postgres via `hermes_readonly` (SQL natif via outils Hermes Agent) — pas d'endpoint de query dans newsletter-engine.
+- Réveil Hermes via webhook platform natif : `POST /webhooks/daily-digest` et `POST /webhooks/user-message`, templates de prompt dans `hermes/config.yaml`.
+- Endpoints newsletter-engine réduits à 3 : `send-digest`, `send-reply`, `preferences`.
+- Settings runtime (`digest_schedule`, `digest_timezone`) en table `app_settings` DB — pas dans `settings.yaml`.
+- Accès web par Hermes directement (outils natifs), contrôle réseau Docker (Phase 5).
 - Scheduler intégré dans newsletter-engine (APScheduler).
 - Une seule adresse Gmail pour tout (newsletters, messages utilisateur, envoi digest).
 - Emails non whitelistés : laissés non lus, non traités.
 - Contenu stocké : texte nettoyé (HTML supprimé, liens conservés).
-- Accès web whitelisté inclus en v1 (via `POST /hermes/fetch-web`).
