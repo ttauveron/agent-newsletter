@@ -111,6 +111,15 @@ config/
   learned_preferences.md  # Préférences apprises au fil du temps
 ```
 
+## Journal de bord
+
+`JOURNAL.md` à la racine du projet trace l'avancement phase par phase. **Après chaque modification significative** (nouvelle fonctionnalité, phase complétée, décision d'architecture), mettre à jour `JOURNAL.md` :
+
+- Passer l'état de la phase concernée (À faire → Partielle → Terminée)
+- Ajouter le ou les commits correspondants
+- Documenter ce qui a été implémenté et les points d'attention éventuels
+- Mettre à jour la section "Prochaine étape recommandée" si elle change
+
 ## Conventions
 
 - Python 3.12+, UV pour la gestion des dépendances
