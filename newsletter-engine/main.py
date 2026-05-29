@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from anthropic import Anthropic
 from fastapi import FastAPI, HTTPException
 
+from api.routes import create_router
 from config import load_settings, load_sources
 from db.session import get_session
 from gmail.client import GmailClient
@@ -32,6 +33,8 @@ async def lifespan(app: FastAPI):
         digest_schedule, digest_timezone, gmail_client, whitelist, anthropic_client
     )
     app.state.scheduler = scheduler
+    app.state.gmail_client = gmail_client
+    app.state.settings = settings
     scheduler.start()
     logger.info("Scheduler started (digest at %s %s)", digest_schedule, digest_timezone)
     yield
@@ -40,6 +43,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Newsletter Engine", lifespan=lifespan)
+app.include_router(create_router(gmail_client, settings))
 
 
 @app.get("/health")

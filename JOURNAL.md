@@ -116,28 +116,19 @@ Référence principale : [PLAN.md](PLAN.md) | [SPECS.md](SPECS.md) | [decisions_
 
 ---
 
-## Phase 2d — API interne FastAPI ⏳ À faire
+## Phase 2d — API interne FastAPI ✅
 
 **Objectif** : les 3 endpoints que Hermes peut appeler sur newsletter-engine. Hermes lit les données directement en DB — pas d'endpoint de query.
 
-### Ce qui existe déjà
+### Ce qui est en place
 
-- `GET /health`
-- `POST /trigger/poll`
-
-### Endpoints à implémenter
-
-| Endpoint | Rôle | Garde-fous |
-|---|---|---|
-| `POST /actions/send-digest` | Envoie le digest + marque `digest_sent` | `to` == `authorized_user_address` |
-| `POST /actions/send-reply` | Répond à un `UserMessage` + marque `answered` | Idem |
-| `POST /hermes/preferences` | Met à jour `app_settings` DB et/ou Markdown | Clés autorisées, diff journalisé, reschedule si besoin |
-
-### Points d'attention
-
-- Nécessite la migration `app_settings` en DB (voir 2c-bis) pour que `POST /hermes/preferences` puisse modifier le schedule.
-- `send-digest` prend un `digest_id` pour retrouver l'enregistrement et le marquer.
-- Factoriser dans `newsletter-engine/api/routes.py`.
+- **`gmail/client.py`** : méthode `send_email(to, subject, body)` ajoutée (MIME text, base64url, Gmail API).
+- **`api/routes.py`** : `create_router(gmail_client, settings)` — 3 endpoints :
+  - `POST /actions/send-digest` : valide que le digest est en état `digest_due` ou `digest_generation_requested`, envoie l'email, marque `digest_sent` + `sent_at`, audit log `digest_sent`.
+  - `POST /actions/send-reply` : valide que le `UserMessage` existe, envoie la réponse, marque `answered` + `hermes_response`, audit log `reply_sent`. Préfixe "Re:" sans doublon.
+  - `POST /hermes/preferences` : clés DB (`digest_schedule`, `digest_timezone`) → `app_settings` + reschedule APScheduler à chaud. Clés Markdown (`user_profile`, `digest_style`, `learned_preferences`) → fichier + diff journalisé en `audit_logs`.
+- **`main.py`** : router inclus, `app.state.scheduler/gmail_client/settings` exposés.
+- **Tests** : `test_api.py` — 22 tests via `TestClient` + `_patched_client` context manager.
 
 ---
 

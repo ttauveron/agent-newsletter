@@ -1,3 +1,5 @@
+import base64
+from email.mime.text import MIMEText
 from pathlib import Path
 
 from google.auth.transport.requests import Request
@@ -54,3 +56,10 @@ class GmailClient:
             id=message_id,
             body={"removeLabelIds": ["UNREAD"]},
         ).execute()
+
+    def send_email(self, to: str, subject: str, body: str) -> None:
+        msg = MIMEText(body, "plain", "utf-8")
+        msg["to"] = to
+        msg["subject"] = subject
+        raw = base64.urlsafe_b64encode(msg.as_bytes()).decode()
+        self.service.users().messages().send(userId="me", body={"raw": raw}).execute()
