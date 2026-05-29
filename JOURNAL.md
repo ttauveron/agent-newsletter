@@ -226,13 +226,12 @@ Référence principale : [PLAN.md](PLAN.md) | [SPECS.md](SPECS.md) | [decisions_
 
 ## Prochaine étape recommandée
 
-Corriger d'abord les incohérences suivies dans [TASKS.md](TASKS.md) :
+Ajouter d'abord le socle de test sans Gmail suivi dans GitHub Issues :
 
-- **#8** : payload du webhook `user-message`
-- **#9** : routage des newsletters transférées par l'utilisateur
-- **#10** : documentation des ports Hermes
+- **Issue #1** : backend email local pour tests end-to-end sans Gmail
+- **Issue #2** : scénario e2e Docker avec mailbox locale
 
-Ensuite, reprendre **#5 et #6** : valider les flux digest et conversationnel end-to-end en démarrant la stack complète. Puis **#7** : sécurité réseau.
+Ensuite, reprendre **#5 et #6** : valider les flux digest et conversationnel end-to-end avec la mailbox locale. Puis **#7** : sécurité réseau.
 
 ---
 

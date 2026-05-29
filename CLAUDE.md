@@ -120,6 +120,15 @@ config/
 - Documenter ce qui a été implémenté et les points d'attention éventuels
 - Mettre à jour la section "Prochaine étape recommandée" si elle change
 
+## Suivi des tâches
+
+Le backlog actionnable est suivi dans les GitHub Issues du dépôt `ttauveron/agent-newsletter`.
+
+- Créer une issue GitHub pour toute nouvelle tâche actionnable ou tout bug à suivre.
+- Référencer les issues dans les commits et dans `JOURNAL.md` quand une phase ou une décision en dépend.
+- Ne pas maintenir de fichier `TASKS.md` local : GitHub Issues est la source de vérité pour les tâches ouvertes/fermées.
+- `JOURNAL.md` reste le journal narratif des phases, décisions et validations importantes, pas un backlog détaillé.
+
 ## Conventions
 
 - Python 3.12+, UV pour la gestion des dépendances
