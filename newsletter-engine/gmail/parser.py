@@ -54,10 +54,7 @@ def _extract_body(payload: dict) -> tuple[str, str]:
 
 
 def parse_message(message: dict) -> ParsedEmail:
-    headers = {
-        h["name"].lower(): h["value"]
-        for h in message["payload"].get("headers", [])
-    }
+    headers = {h["name"].lower(): h["value"] for h in message["payload"].get("headers", [])}
 
     sender_name, sender_email = parseaddr(headers.get("from", ""))
 

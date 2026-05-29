@@ -45,10 +45,7 @@ class GmailClient:
 
     def get_message(self, message_id: str) -> dict:
         return (
-            self.service.users()
-            .messages()
-            .get(userId="me", id=message_id, format="full")
-            .execute()
+            self.service.users().messages().get(userId="me", id=message_id, format="full").execute()
         )
 
     def mark_as_read(self, message_id: str) -> None:

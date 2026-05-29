@@ -3,6 +3,7 @@
 Run once to generate the token file:
     docker compose run --rm newsletter-engine python -m gmail.auth
 """
+
 import os
 from pathlib import Path
 
@@ -21,7 +22,7 @@ def main() -> None:
             "client_id": client_id,
             "client_secret": client_secret,
             "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-            "token_uri": "https://oauth2.googleapis.com/token",
+            "token_uri": "https://oauth2.googleapis.com/token",  # nosec B105
             "redirect_uris": ["urn:ietf:wg:oauth:2.0:oob"],
         }
     }

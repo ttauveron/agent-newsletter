@@ -2,6 +2,7 @@ from processing.cleaner import clean_content, clean_html
 
 # --- plain text ---
 
+
 def test_plain_text_passthrough():
     text = "Hello world\nThis is a test."
     assert clean_content(text, "text/plain") == text
@@ -17,6 +18,7 @@ def test_plain_text_empty():
 
 
 # --- HTML stripping ---
+
 
 def test_strips_html_tags():
     result = clean_html("<p>Hello <b>world</b></p>")
@@ -43,6 +45,7 @@ def test_empty_html():
 
 # --- Link preservation ---
 
+
 def test_link_text_and_href():
     result = clean_html('<a href="https://example.com">Click here</a>')
     assert "Click here (https://example.com)" in result
@@ -59,7 +62,7 @@ def test_link_no_text_uses_href():
 
 
 def test_link_no_href_uses_text():
-    result = clean_html('<a>plain anchor</a>')
+    result = clean_html("<a>plain anchor</a>")
     assert "plain anchor" in result
     assert "<a" not in result
 
@@ -72,6 +75,7 @@ def test_multiple_links_preserved():
 
 
 # --- content_type dispatch ---
+
 
 def test_html_content_type_cleans_tags():
     result = clean_content("<p>Hello</p>", "text/html")

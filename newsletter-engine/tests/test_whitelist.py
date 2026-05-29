@@ -1,4 +1,3 @@
-
 from config import EmailConfig, Settings, SourceRule, SourcesConfig
 from processing.whitelist import EmailAction, WhitelistFilter
 
@@ -10,6 +9,7 @@ def make_filter(authorized_user: str = "user@personal.com", rules: list = None) 
 
 
 # --- Authorized user ---
+
 
 def test_authorized_user_is_user_message():
     f = make_filter(authorized_user="user@personal.com")
@@ -27,6 +27,7 @@ def test_empty_authorized_user_not_matched():
 
 
 # --- Exact match ---
+
 
 def test_exact_match_newsletter():
     rules = [SourceRule(match="newsletter@example.com", category="cloud_security")]
@@ -49,6 +50,7 @@ def test_exact_match_no_partial():
 
 # --- Domain match ---
 
+
 def test_domain_match_newsletter():
     rules = [SourceRule(match_domain="linkedin.com", category="market_signal")]
     result = make_filter(rules=rules).classify("jobs@linkedin.com")
@@ -69,6 +71,7 @@ def test_domain_match_no_subdomain_bleed():
 
 
 # --- Priority & fallthrough ---
+
 
 def test_exact_match_before_domain_match():
     rules = [

@@ -14,13 +14,15 @@ def transition_state(
     from_state: Optional[str] = None,
     metadata: Optional[dict] = None,
 ) -> None:
-    session.add(ProcessingEvent(
-        entity_type=entity_type,
-        entity_id=entity_id,
-        from_state=from_state,
-        to_state=to_state,
-        event_metadata=metadata,
-    ))
+    session.add(
+        ProcessingEvent(
+            entity_type=entity_type,
+            entity_id=entity_id,
+            from_state=from_state,
+            to_state=to_state,
+            event_metadata=metadata,
+        )
+    )
 
 
 def audit(
@@ -30,9 +32,11 @@ def audit(
     entity_type: Optional[str] = None,
     entity_id: Optional[uuid.UUID] = None,
 ) -> None:
-    session.add(AuditLog(
-        event_type=event_type,
-        entity_type=entity_type,
-        entity_id=entity_id,
-        payload=payload,
-    ))
+    session.add(
+        AuditLog(
+            event_type=event_type,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            payload=payload,
+        )
+    )

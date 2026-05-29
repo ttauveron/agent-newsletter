@@ -33,6 +33,7 @@ def make_message(
 
 # --- IDs ---
 
+
 def test_gmail_message_id():
     parsed = parse_message(make_message(msg_id="abc123"))
     assert parsed.gmail_message_id == "abc123"
@@ -44,6 +45,7 @@ def test_gmail_thread_id():
 
 
 # --- Sender parsing ---
+
 
 def test_sender_email_extracted():
     parsed = parse_message(make_message(from_header="John Doe <john@example.com>"))
@@ -68,12 +70,14 @@ def test_sender_email_lowercased():
 
 # --- Subject ---
 
+
 def test_subject_parsed():
     parsed = parse_message(make_message(subject="Weekly Digest #42"))
     assert parsed.subject == "Weekly Digest #42"
 
 
 # --- Date ---
+
 
 def test_received_at_has_timezone():
     parsed = parse_message(make_message(date="Mon, 01 Jan 2024 12:00:00 +0000"))
@@ -86,6 +90,7 @@ def test_received_at_invalid_date_fallback():
 
 
 # --- Body extraction ---
+
 
 def test_plain_text_body():
     parsed = parse_message(make_message(mime_type="text/plain", body_text="Hello world"))
