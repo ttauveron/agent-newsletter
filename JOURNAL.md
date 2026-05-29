@@ -215,7 +215,13 @@ Référence principale : [PLAN.md](PLAN.md) | [SPECS.md](SPECS.md) | [decisions_
 
 ## Prochaine étape recommandée
 
-**Tâches #5 et #6** : valider les flux digest et conversationnel end-to-end en démarrant la stack complète. Puis **#7** : sécurité réseau.
+Corriger d'abord les incohérences suivies dans [TASKS.md](TASKS.md) :
+
+- **#8** : payload du webhook `user-message`
+- **#9** : routage des newsletters transférées par l'utilisateur
+- **#10** : documentation des ports Hermes
+
+Ensuite, reprendre **#5 et #6** : valider les flux digest et conversationnel end-to-end en démarrant la stack complète. Puis **#7** : sécurité réseau.
 
 ---
 
