@@ -45,10 +45,15 @@ curl -fsS -X POST "$api/dev/emails" \
 
 curl -fsS -X POST "$api/trigger/poll" >/dev/null
 
-newsletter_count=$("${compose[@]}" exec -T postgres psql \
+enriched_newsletter_count=$("${compose[@]}" exec -T postgres psql \
   -U "$POSTGRES_SUPERUSER" \
   -d "$POSTGRES_DB" \
-  -tAc "select count(*) from emails where gmail_message_id = 'newsletter-1' and processing_state in ('cleaned', 'ready_for_hermes')")
+  -tAc "select count(*)
+        from emails e
+        join summaries s on s.email_id = e.id
+        where e.gmail_message_id = 'newsletter-1'
+          and e.processing_state = 'ready_for_hermes'
+          and s.model_used = 'local-e2e'")
 
 user_message_id=$("${compose[@]}" exec -T postgres psql \
   -U "$POSTGRES_SUPERUSER" \
@@ -59,8 +64,8 @@ hermes_email_count=$("${compose[@]}" exec -T postgres psql \
   "postgresql://$HERMES_DB_USER:$HERMES_DB_PASSWORD@localhost:5432/$POSTGRES_DB" \
   -tAc "select count(*) from emails")
 
-if [[ "$newsletter_count" != "1" ]]; then
-  echo "Expected newsletter-1 to be ingested, got count=$newsletter_count" >&2
+if [[ "$enriched_newsletter_count" != "1" ]]; then
+  echo "Expected newsletter-1 to be enriched locally, got count=$enriched_newsletter_count" >&2
   exit 1
 fi
 
