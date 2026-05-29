@@ -4,7 +4,7 @@
 
 ### #8 — Corriger le payload du webhook `user-message`
 
-**État** : À faire
+**État** : Terminée
 
 **Contexte**
 

@@ -108,6 +108,7 @@ def test_check_user_messages_updates_state_and_wakes_hermes():
     msg = MagicMock()
     msg.id = uuid.uuid4()
     msg.subject = "Weekly summary please"
+    msg.content = "Can you summarize this week's newsletters?"
     msg.processing_state = UserMessageState.user_message_received
 
     session = MagicMock()
@@ -123,15 +124,18 @@ def test_check_user_messages_updates_state_and_wakes_hermes():
     assert payload["event"] == "user-message"
     assert payload["message_id"] == str(msg.id)
     assert payload["subject"] == "Weekly summary please"
+    assert payload["content"] == "Can you summarize this week's newsletters?"
 
 
 def test_check_user_messages_wakes_hermes_once_per_message():
     msg1 = MagicMock()
     msg1.id = uuid.uuid4()
     msg1.subject = "Msg 1"
+    msg1.content = "Content 1"
     msg2 = MagicMock()
     msg2.id = uuid.uuid4()
     msg2.subject = "Msg 2"
+    msg2.content = "Content 2"
 
     session = MagicMock()
     session.execute.return_value.scalars.return_value.all.return_value = [msg1, msg2]

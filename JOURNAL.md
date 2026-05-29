@@ -152,6 +152,11 @@ Référence principale : [PLAN.md](PLAN.md) | [SPECS.md](SPECS.md) | [decisions_
 - **`.env.example`** : `HERMES_API_KEY` ajouté, `HERMES_URL` → `HERMES_WEBHOOK_URL`.
 - **`scheduler.py`** : `_wake_hermes` lit `HERMES_WEBHOOK_URL` (port 8644) au lieu de `HERMES_URL`.
 
+### Correction #8 — Payload `user-message` ✅
+
+- **`scheduler.py`** : le webhook `user-message` reçoit maintenant `content` en plus de `message_id` et `subject`, conformément au template Hermes.
+- **Tests** : `test_scheduler.py` vérifie le champ `content` dans le payload transmis à Hermes.
+
 ### À valider
 
 - Démarrage du conteneur Hermes (`docker compose up hermes`) — flux digest et conversationnel end-to-end (tâches #5 et #6).

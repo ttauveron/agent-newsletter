@@ -95,7 +95,12 @@ async def _check_user_messages() -> None:
         for msg in msgs:
             msg.processing_state = UserMessageState.passed_to_hermes
             pending.append(
-                {"event": "user-message", "message_id": str(msg.id), "subject": msg.subject}
+                {
+                    "event": "user-message",
+                    "message_id": str(msg.id),
+                    "subject": msg.subject,
+                    "content": msg.content,
+                }
             )
     if pending:
         logger.info("Forwarding %d user message(s) to Hermes", len(pending))
