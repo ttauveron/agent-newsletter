@@ -40,7 +40,7 @@ def reschedule_digest(scheduler: AsyncIOScheduler, schedule: str, timezone: str)
 
 
 async def _wake_hermes(payload: dict) -> None:
-    hermes_url = os.environ.get("HERMES_URL", "http://hermes:8642")
+    hermes_url = os.environ.get("HERMES_WEBHOOK_URL", "http://hermes:8644")
     event = payload.get("event", "unknown")
     endpoint = f"{hermes_url}/webhooks/{event}"
     try:

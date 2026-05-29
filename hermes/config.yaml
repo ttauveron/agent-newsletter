@@ -1,0 +1,111 @@
+model:
+  provider: "anthropic"
+  default: "claude-sonnet-4-6"
+  context_length: 200000
+
+terminal:
+  backend: local
+  timeout: 120
+
+memory:
+  memory_enabled: false
+  user_profile_enabled: false
+
+security:
+  redact_secrets: true
+
+platforms:
+  webhook:
+    enabled: true
+    extra:
+      port: 8644
+      routes:
+        daily-digest:
+          prompt: |
+            Le digest quotidien est dû pour la date {date}.
+
+            Tu es Hermès, un agent de veille qui génère des digests personnalisés à partir de newsletters ingérées.
+
+            ## Étape 1 — Récupérer les emails disponibles
+
+            Connecte-toi à PostgreSQL via la variable d'environnement DATABASE_URL (rôle hermes_readonly, accès en lecture seule).
+
+            Requête les emails prêts à traiter :
+
+            ```sql
+            SELECT e.id, e.subject, e.sender_email, e.source_category, e.received_at,
+                   s.summary_text, s.key_points, s.tags
+            FROM emails e
+            JOIN summaries s ON s.email_id = e.id
+            WHERE e.processing_state = 'ready_for_hermes'
+            ORDER BY e.received_at DESC;
+            ```
+
+            Récupère aussi l'id du digest du jour :
+
+            ```sql
+            SELECT id FROM digests WHERE digest_date = '{date}' LIMIT 1;
+            ```
+
+            ## Étape 2 — Lire les préférences utilisateur
+
+            Lis les fichiers suivants (montés en lecture seule) :
+            - /app/config/user_profile.md
+            - /app/config/digest_style.md
+            - /app/config/learned_preferences.md
+
+            ## Étape 3 — Sélectionner et rédiger
+
+            Sélectionne les éléments les plus pertinents selon le profil utilisateur.
+            Rédige le digest en respectant le style éditorial défini.
+            Pour chaque item : note ta décision (inclus / ignoré) et la raison.
+
+            ## Étape 4 — Envoyer
+
+            Envoie le digest via l'API newsletter-engine :
+
+            POST ${NEWSLETTER_ENGINE_URL}/actions/send-digest
+            Content-Type: application/json
+            {
+              "digest_id": "<id récupéré à l'étape 1>",
+              "content": "<digest rédigé>"
+            }
+
+        user-message:
+          prompt: |
+            L'utilisateur a envoyé un message :
+
+            Sujet : {subject}
+            ID message : {message_id}
+            Contenu :
+            {content}
+
+            Tu es Hermès. Interprète ce message et réponds de façon appropriée.
+
+            ## Cas possibles
+
+            **Question analytique** (ex: "quels sujets reviennent le plus ?") :
+            Connecte-toi à PostgreSQL via DATABASE_URL (rôle hermes_readonly) et effectue la requête SQL nécessaire pour répondre.
+
+            **Feedback ou préférence** (ex: "ignore les annonces marketing") :
+            Mets à jour les préférences via :
+            POST ${NEWSLETTER_ENGINE_URL}/hermes/preferences
+            {"key": "<clé>", "value": "<nouvelle valeur>"}
+            Clés disponibles : user_profile, digest_style, learned_preferences, digest_schedule, digest_timezone
+
+            **Changement de configuration** (ex: "change le digest à 08:00") :
+            POST ${NEWSLETTER_ENGINE_URL}/hermes/preferences
+            {"key": "digest_schedule", "value": "08:00"}
+
+            **Question simple** : réponds directement.
+
+            ## Envoyer la réponse
+
+            Une fois ta réponse formulée, envoie-la via :
+
+            POST ${NEWSLETTER_ENGINE_URL}/actions/send-reply
+            Content-Type: application/json
+            {
+              "user_message_id": "{message_id}",
+              "content": "<ta réponse>"
+            }

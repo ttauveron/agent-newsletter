@@ -32,7 +32,7 @@ def test_wake_hermes_posts_to_webhook_url():
     mock_client.__aenter__ = AsyncMock(return_value=mock_client)
     mock_client.__aexit__ = AsyncMock(return_value=False)
 
-    with patch.dict("os.environ", {"HERMES_URL": "http://test-hermes:9999"}):
+    with patch.dict("os.environ", {"HERMES_WEBHOOK_URL": "http://test-hermes:9999"}):
         with patch("httpx.AsyncClient", return_value=mock_client):
             asyncio.run(_wake_hermes({"event": "daily-digest", "date": "2026-05-29"}))
 

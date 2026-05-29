@@ -13,7 +13,7 @@ Référence principale : [PLAN.md](PLAN.md) | [SPECS.md](SPECS.md) | [decisions_
 | 2b | Enrichissement | **Terminée** |
 | 2c | Scheduler | **Terminée** |
 | 2d | API interne FastAPI | Partielle |
-| 3a | Déploiement Hermes Agent | À faire |
+| 3a | Déploiement Hermes Agent | **Terminée** |
 | 3b | Flux digest journalier | À faire |
 | 3c | Flux conversationnel | À faire |
 | 4 | Configuration & préférences | Partielle (fichiers créés) |
@@ -132,22 +132,29 @@ Référence principale : [PLAN.md](PLAN.md) | [SPECS.md](SPECS.md) | [decisions_
 
 ---
 
-## Phase 3 — Hermes Agent ⏳ À faire
-
-**Répertoire `hermes/`** : vide pour l'instant.
+## Phase 3 — Hermes Agent ⏳ En cours
 
 ### Ce qu'on sait sur Hermes Agent (NousResearch)
 
 - Expose `POST /v1/chat/completions` (OpenAI-compatible), `POST /v1/runs` (async SSE), et un **webhook platform**.
-- Le webhook platform est la bonne approche : routes nommées dans `hermes/config.yaml`, newsletter-engine POSTe des données JSON, Hermes injecte les variables dans un template de prompt.
-- Dispose d'outils natifs : terminal, Python exec, web fetch/search — aucun outil custom à implémenter côté newsletter-engine pour la lecture de données.
-- Authentification API via `API_SERVER_KEY`.
+- **API server sur port 8642**, **webhooks sur port 8644** (deux ports distincts).
+- Webhook platform : routes nommées dans `hermes/config.yaml`, newsletter-engine POSTe des données JSON, Hermes injecte les variables via `{field.path}` dans le template de prompt.
+- Dispose d'outils natifs : terminal, Python exec, web fetch/search — accès DB via Python/psql dans le conteneur.
+- Config dans `~/.hermes/config.yaml` (monté via volume Docker), secrets dans env vars.
+- `API_SERVER_ENABLED=true` + `API_SERVER_HOST=0.0.0.0` requis pour écouter dans Docker.
 
-### 3a — Déploiement Hermes Agent
+### 3a — Configuration Hermes Agent ✅
 
-- Créer `hermes/config.yaml` avec : provider LLM, connexion DB (`hermes_readonly`), webhooks `daily-digest` et `user-message`, outils autorisés.
-- Mettre à jour `scheduler.py` pour utiliser les bons endpoints webhook (`/webhooks/daily-digest`, `/webhooks/user-message`).
-- Variables d'environnement dans `.env` : `API_SERVER_KEY`, provider LLM key.
+- **`hermes/config.yaml`** : provider `anthropic` / modèle `claude-sonnet-4-6`, terminal `local`, webhooks sur port 8644 avec deux routes :
+  - `daily-digest` : prompt guidant Hermes à requêter la DB, lire les Markdown config, générer et envoyer le digest via `POST /actions/send-digest`.
+  - `user-message` : prompt guidant Hermes à interpréter le message (SQL, préférences, réponse directe) et répondre via `POST /actions/send-reply`.
+- **`docker-compose.yml`** : port 8644 exposé, `hermes/config.yaml` monté en `:ro` à `/root/.hermes/config.yaml`, `./config` monté en `:ro` à `/app/config`, `API_SERVER_ENABLED/KEY` ajoutés, `HERMES_WEBHOOK_URL=http://hermes:8644` pour newsletter-engine.
+- **`.env.example`** : `HERMES_API_KEY` ajouté, `HERMES_URL` → `HERMES_WEBHOOK_URL`.
+- **`scheduler.py`** : `_wake_hermes` lit `HERMES_WEBHOOK_URL` (port 8644) au lieu de `HERMES_URL`.
+
+### À valider
+
+- Démarrage du conteneur Hermes (`docker compose up hermes`) — flux digest et conversationnel end-to-end (tâches #5 et #6).
 
 ### 3b — Flux digest journalier (révisé)
 
@@ -208,7 +215,7 @@ Référence principale : [PLAN.md](PLAN.md) | [SPECS.md](SPECS.md) | [decisions_
 
 ## Prochaine étape recommandée
 
-**2c-bis** : migration `app_settings` en DB + mise à jour scheduler. Puis **2d** : les 3 endpoints (`send-digest`, `send-reply`, `preferences`). Puis **3a** : `hermes/config.yaml` + test des webhooks end-to-end.
+**Tâches #5 et #6** : valider les flux digest et conversationnel end-to-end en démarrant la stack complète. Puis **#7** : sécurité réseau.
 
 ---
 

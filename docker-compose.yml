@@ -28,7 +28,8 @@ services:
       GMAIL_CLIENT_ID: ${GMAIL_CLIENT_ID}
       GMAIL_CLIENT_SECRET: ${GMAIL_CLIENT_SECRET}
       GMAIL_TOKEN_PATH: ${GMAIL_TOKEN_PATH:-/app/config/gmail_token.json}
-      HERMES_URL: http://hermes:8642
+      HERMES_WEBHOOK_URL: http://hermes:8644
+      NEWSLETTER_ENGINE_URL: http://newsletter-engine:8000
     depends_on:
       postgres:
         condition: service_healthy
@@ -46,19 +47,24 @@ services:
     image: nousresearch/hermes-agent:latest
     command: gateway run
     environment:
-      HERMES_UID: ${HERMES_UID:-1000}
-      HERMES_GID: ${HERMES_GID:-1000}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       DATABASE_URL: postgresql://${HERMES_DB_USER}:${HERMES_DB_PASSWORD}@postgres:5432/${POSTGRES_DB}
       NEWSLETTER_ENGINE_URL: http://newsletter-engine:8000
+      API_SERVER_ENABLED: "true"
+      API_SERVER_HOST: "0.0.0.0"
+      API_SERVER_KEY: ${HERMES_API_KEY}
     depends_on:
       postgres:
         condition: service_healthy
       newsletter-engine:
         condition: service_healthy
     volumes:
-      - hermes_data:/opt/data
+      - ./hermes/config.yaml:/root/.hermes/config.yaml:ro
+      - ./config:/app/config:ro
+      - hermes_data:/root/.hermes/data
     ports:
       - "8642:8642"
+      - "8644:8644"
 
 volumes:
   postgres_data:
