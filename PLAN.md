@@ -117,7 +117,7 @@ webhooks:
     prompt: "L'utilisateur a envoyé : '{content}' (sujet: {subject}). Traite ce message..."
 ```
 
-Newsletter-engine POSTe sur `http://hermes:8642/webhooks/daily-digest` ou `/webhooks/user-message` avec les données JSON correspondantes.
+Newsletter-engine POSTe sur `http://hermes:8644/webhooks/daily-digest` ou `/webhooks/user-message` avec les données JSON correspondantes. Le port `8642` reste réservé à l'API server OpenAI-compatible.
 
 ### 3b — Flux digest journalier
 

@@ -40,11 +40,11 @@ Ajouter l'heuristique de sujet transféré dans le routage Gmail sans complexifi
 
 ### #10 — Aligner la documentation des ports Hermes
 
-**État** : À faire
+**État** : Terminée
 
 **Contexte**
 
-Le code et `docker-compose.yml` utilisent le port `8644` pour les webhooks Hermes, mais `PLAN.md` et `decisions_architecture.md` mentionnent encore `8642` pour certaines routes webhook.
+Le code et `docker-compose.yml` utilisent le port `8644` pour les webhooks Hermes, mais `PLAN.md` et `decisions_architecture.md` mentionnaient encore `8642` pour certaines routes webhook.
 
 **Objectif**
 
@@ -52,6 +52,6 @@ Mettre les documents d'architecture en cohérence avec l'implémentation actuell
 
 **Critères de validation**
 
-- `PLAN.md` ne décrit plus les webhooks sur `8642`.
-- `decisions_architecture.md` ne décrit plus les webhooks sur `8642`.
+- `PLAN.md` ne décrit plus les routes webhook avec `hermes:8642`.
+- `decisions_architecture.md` ne décrit plus les routes webhook avec `hermes:8642`.
 - `JOURNAL.md` reste cohérent avec la distinction `8642` / `8644`.

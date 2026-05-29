@@ -35,8 +35,8 @@ Compromis :
 Deux webhooks configurés :
 
 ```
-POST http://hermes:8642/webhooks/daily-digest   → inject: { date, email_count }
-POST http://hermes:8642/webhooks/user-message   → inject: { message_id, subject, content }
+POST http://hermes:8644/webhooks/daily-digest   → inject: { date }
+POST http://hermes:8644/webhooks/user-message   → inject: { message_id, subject, content }
 ```
 
 Les données JSON sont injectées dans les templates de prompt via des variables (`{date}`, `{subject}`, etc.). Hermes Agent expose aussi `POST /v1/runs` (async avec SSE) et `POST /v1/chat/completions` (OpenAI-compatible) si besoin d’appels directs.
