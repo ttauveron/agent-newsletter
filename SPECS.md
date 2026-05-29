@@ -31,14 +31,16 @@ docker-compose
 
 ### 2.1 Hermès
 
-Hermès est le cerveau du système.
+Hermès est le cerveau du système. Il est implémenté via **[Hermes Agent](https://github.com/NousResearch/hermes-agent)**, un projet open-source de NousResearch.
+
+Hermes Agent fonctionne avec n’importe quel endpoint OpenAI-compatible. Le choix du provider LLM (Anthropic, OpenRouter, Ollama, etc.) est une décision de configuration, pas d’implémentation.
 
 Il ne récupère pas directement les emails. Il ne gère pas directement les accès Gmail. Il ne fait pas lui-même les opérations techniques dangereuses.
 
 Son rôle est de :
 
 * comprendre les demandes de l’utilisateur ;
-* lire l’état métier exposé en base de données ;
+* lire l’état métier exposé via les endpoints du `newsletter-engine` ;
 * raisonner sur les digests et les signaux ;
 * décider quoi communiquer à l’utilisateur ;
 * adapter les préférences utilisateur ;
@@ -53,7 +55,7 @@ Dans le premier cas, Hermès prépare le résumé des actualités à envoyer.
 
 Dans le second cas, Hermès traite le message de l’utilisateur comme une demande conversationnelle ou comme du feedback.
 
-Hermès peut interroger la base de données en lecture seule sur les données métier exposées. Il peut, par exemple, répondre à des questions comme :
+Hermès accède aux données via des endpoints HTTP dédiés exposés par le `newsletter-engine` (pas d’accès SQL direct). Il peut, par exemple, répondre à des questions comme :
 
 * combien d’articles ont été résumés sur la dernière année ;
 * quels sujets reviennent le plus souvent ;
@@ -61,7 +63,7 @@ Hermès peut interroger la base de données en lecture seule sur les données m�
 * quelles sources produisent le plus de contenu utile ;
 * quels sujets ont été ignorés ou dépriorisés.
 
-Hermès peut aussi accéder à Internet, mais seulement vers des domaines explicitement autorisés.
+Hermès peut aussi accéder à Internet, mais seulement vers des domaines explicitement autorisés, via un endpoint du `newsletter-engine`.
 
 ### 2.2 Newsletter Engine
 

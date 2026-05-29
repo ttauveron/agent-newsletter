@@ -17,11 +17,11 @@ La défense principale est le confinement :
 ---
 ### Accès d’Hermès aux données
 
-Hermès dispose d’un accès SQL read-only à Postgres.
+**Décision révisée** : Hermès est implémenté via [Hermes Agent](https://github.com/NousResearch/hermes-agent) (NousResearch). Il n’accède pas directement à Postgres — il passe par des endpoints HTTP exposés par le `newsletter-engine`.
 
-L’objectif est de lui permettre d’interroger librement la mémoire métier du système : emails ingérés, résumés, digests, feedbacks, sources, signaux, historique et états de traitement.
+Ce changement par rapport à la décision initiale (accès SQL direct) est motivé par le fait que Hermes Agent communique avec ses outils via des appels HTTP, pas via des connexions DB directes. Le `newsletter-engine` expose un endpoint `GET /hermes/query` qui accepte une requête en langage naturel ou structurée et retourne les données pertinentes.
 
-Hermès peut utiliser SQL pour répondre à des questions analytiques, par exemple :
+Hermès peut répondre aux mêmes questions analytiques qu’avant :
 
 * combien d’articles ont été résumés sur une période ;
 * quelles sources produisent le plus de signaux utiles ;
@@ -29,18 +29,13 @@ Hermès peut utiliser SQL pour répondre à des questions analytiques, par exemp
 * quelles différences apparaissent entre deux périodes ;
 * quels contenus ont été ignorés ou inclus dans les digests.
 
-Hermès va apprendre le modèle de données afin de savoir quelles tables consulter.
-
-Le choix initial est de lui exposer les tables métier directement, plutôt que de créer des vues dédiées. Ce choix privilégie la simplicité et la flexibilité.
-
 Compromis :
 
-* gain : Hermès est plus autonome pour explorer les données ;
-* gain : moins d’API métier à maintenir ;
-* gain : plus simple à faire évoluer pendant l’expérimentation ;
-* sacrifice : moins de contrôle fin sur ce qu’Hermès peut voir ;
-* sacrifice : risque de requêtes inefficaces ou trop larges ;
-* sacrifice : plus grande dépendance à la qualité du schéma et de sa documentation.
+* gain : contrôle total sur ce qu’Hermès peut voir et faire ;
+* gain : validation et rate limiting côté newsletter-engine ;
+* gain : compatible avec l’architecture tool-based de Hermes Agent ;
+* sacrifice : plus d’API à maintenir dans le newsletter-engine ;
+* sacrifice : moins de flexibilité ad hoc pour les requêtes analytiques complexes.
 
 Garde-fous minimaux :
 

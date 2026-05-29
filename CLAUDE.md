@@ -12,7 +12,7 @@ docker-compose
 ```
 
 - **newsletter-engine** : Python, FastAPI, Gmail API, APScheduler, SQLAlchemy, Alembic
-- **hermes** : Python, Claude API (Sonnet 4.6), tool use natif
+- **hermes** : [Hermes Agent](https://github.com/NousResearch/hermes-agent) (NousResearch) — fonctionne avec tout endpoint OpenAI-compatible, provider configurable
 - **postgres** : rôle `newsletter_engine` (read/write), rôle `hermes_readonly` (SELECT uniquement)
 
 ## Commandes de développement
@@ -96,7 +96,8 @@ newsletter-engine/
     test_parser.py
 
 hermes/
-  main.py                 # Placeholder Phase 3
+  # Hermes Agent (NousResearch) — déployé via Docker, configuré par .env et config/
+  # Pas de code custom : configuration du provider LLM, des outils, et de la mémoire
 
 migrations/
   versions/

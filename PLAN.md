@@ -5,9 +5,11 @@
 | Composant | Technologie |
 |---|---|
 | `newsletter-engine` | Python, FastAPI, Gmail API, APScheduler, SQLAlchemy |
-| `hermes` | Python, Claude API (Sonnet 4.6), tool use natif |
+| `hermes` | [Hermes Agent](https://github.com/NousResearch/hermes-agent) (NousResearch), provider-agnostic |
 | `postgres` | PostgreSQL 16, deux rôles distincts |
 | Orchestration | Docker Compose |
+
+Hermes Agent est un projet open-source de NousResearch. Il fonctionne avec n'importe quel endpoint OpenAI-compatible (Anthropic, OpenRouter, Ollama, NVIDIA NIM, etc.) — le choix du provider est une question de configuration, pas de code. Le newsletter-engine reste un pipeline déterministe sans LangGraph.
 
 ---
 
@@ -85,22 +87,29 @@ Le newsletter-engine valide chaque action avant exécution (ex : destinataire fo
 
 ---
 
-## Phase 3 — Hermès (agent Claude)
+## Phase 3 — Hermès (Hermes Agent)
 
-**Objectif** : raisonnement, sélection, génération du digest, conversation.
+**Objectif** : déployer et configurer Hermes Agent comme cerveau du système.
 
-### 3a — Structure de l'agent
+### 3a — Déploiement de Hermes Agent
 
-Agent Claude API avec tool use natif. Tools disponibles :
+Hermes Agent (NousResearch) remplace un agent Claude custom. Il est déployé comme service Docker et configuré pour :
 
-| Tool | Description | Garde-fous |
+- **Provider LLM** : n'importe quel endpoint OpenAI-compatible (configurable via `.env`)
+- **Mémoire** : Postgres (rôle `hermes_readonly` pour les données métier)
+- **Outils** : endpoints HTTP exposés par le newsletter-engine
+
+Les outils exposés par le newsletter-engine pour Hermes Agent :
+
+| Endpoint | Rôle | Garde-fous |
 |---|---|---|
-| `query_database(sql)` | SQL read-only sur Postgres | Timeout 10s, limite résultats, logs |
-| `run_python(code)` | Analyse locale de données | Pas d'accès réseau, pas de filesystem externe |
-| `fetch_web(url)` | Récupération contenu web | Domaines whitelistés uniquement, extraction texte |
-| `call_engine_api(action, payload)` | Appel API newsletter-engine | Actions limitées à la liste définie |
-| `read_preferences()` | Lecture fichiers Markdown config | — |
-| `write_preferences(diff)` | Modification fichiers Markdown config | Diff journalisé pour audit |
+| `GET /hermes/emails` | Emails `ready_for_hermes` avec résumés | Read-only, paginé |
+| `GET /hermes/query` | Requête SQL read-only | Timeout 10s, limite résultats |
+| `POST /hermes/fetch-web` | Récupération contenu web | Domaines whitelistés uniquement |
+| `POST /actions/send-email` | Envoi email | Destinataire validé côté newsletter-engine |
+| `POST /actions/mark-digest-sent` | Mise à jour état digest | — |
+| `GET /hermes/preferences` | Lecture fichiers Markdown config | — |
+| `POST /hermes/preferences` | Modification fichiers Markdown config | Diff journalisé |
 
 ### 3b — Flux digest journalier
 
