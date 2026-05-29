@@ -1,5 +1,6 @@
 import logging
 import os
+from contextlib import asynccontextmanager
 
 from anthropic import Anthropic
 from fastapi import FastAPI, HTTPException
@@ -9,6 +10,7 @@ from db.session import get_session
 from gmail.client import GmailClient
 from gmail.poller import poll
 from processing.whitelist import WhitelistFilter
+from scheduler import create_scheduler
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -21,7 +23,22 @@ gmail_client = GmailClient(
 )
 anthropic_client = Anthropic()
 
-app = FastAPI(title="Newsletter Engine")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    scheduler = create_scheduler(settings, gmail_client, whitelist, anthropic_client)
+    scheduler.start()
+    logger.info(
+        "Scheduler started (digest at %s %s)",
+        settings.digest.schedule,
+        settings.digest.timezone,
+    )
+    yield
+    scheduler.shutdown(wait=False)
+    logger.info("Scheduler stopped")
+
+
+app = FastAPI(title="Newsletter Engine", lifespan=lifespan)
 
 
 @app.get("/health")

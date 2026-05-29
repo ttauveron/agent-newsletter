@@ -11,7 +11,7 @@ Référence principale : [PLAN.md](PLAN.md) | [SPECS.md](SPECS.md) | [decisions_
 | 1 | Infrastructure & base de données | **Terminée** |
 | 2a | Gmail & ingestion | **Terminée** |
 | 2b | Enrichissement | **Terminée** |
-| 2c | Scheduler | À faire |
+| 2c | Scheduler | **Terminée** |
 | 2d | API interne FastAPI | Partielle |
 | 3a | Déploiement Hermes Agent | À faire |
 | 3b | Flux digest journalier | À faire |
@@ -77,21 +77,26 @@ Référence principale : [PLAN.md](PLAN.md) | [SPECS.md](SPECS.md) | [decisions_
 
 ---
 
-## Phase 2c — Scheduler ⏳ À faire
+## Phase 2c — Scheduler ✅
 
-**Objectif** : déclencher `daily_digest_due` à l'heure configurée et détecter les messages utilisateur.
+**Commits** : à venir
 
-### À implémenter
+### Ce qui est en place
 
-- Intégrer **APScheduler** dans `newsletter-engine`.
-- Tâche cron : à l'heure `settings.digest.schedule` (fuseau `settings.digest.timezone`), créer un enregistrement `Digest` avec état `digest_due` et appeler `POST /trigger/hermes` sur Hermes.
-- Tâche de polling Gmail : appeler régulièrement `POST /trigger/poll` (ou intégrer dans le scheduler plutôt que via API).
-- Les `UserMessage` en état `user_message_received` doivent déclencher un wake-up Hermes.
+- **`scheduler.py`** : `AsyncIOScheduler` APScheduler avec 3 jobs wired dans le lifespan FastAPI :
+  - `daily_digest` : `CronTrigger` à l'heure `settings.digest.schedule` / `settings.digest.timezone`. Crée un enregistrement `Digest` (`digest_due`) si aucun n'existe pour aujourd'hui, puis appelle `_wake_hermes` avec `event=daily_digest_due`.
+  - `gmail_poll` : `IntervalTrigger` toutes les 5 minutes. Appelle le pipeline `poll()` existant.
+  - `check_user_messages` : `IntervalTrigger` toutes les minutes. Trouve les `UserMessage` en état `user_message_received`, les passe à `passed_to_hermes`, puis appelle `_wake_hermes` pour chaque message.
+- **`_wake_hermes(payload)`** : appel HTTP `POST {HERMES_URL}/api/trigger` via httpx async. Non-fatal : log l'erreur sans lever d'exception.
+- **`main.py`** : scheduler démarré/arrêté via `asynccontextmanager lifespan` FastAPI.
+- **`tests/conftest.py`** : fixe `DATABASE_URL` pour que `db/session.py` s'importe sans DB réelle en test.
+- **Tests** : `test_scheduler.py` — 14 tests couvrant `_wake_hermes`, `_run_daily_digest`, `_check_user_messages`, `create_scheduler`.
 
 ### Points d'attention
 
-- L'heure du digest est configurable dans `config/settings.yaml` (`digest.schedule` + `digest.timezone`).
-- Le scheduler doit survivre au redémarrage du conteneur (état en mémoire suffit — le Digest en DB est la source de vérité).
+- `_wake_hermes` appelle `{HERMES_URL}/api/trigger` — endpoint à confirmer lors de la configuration Hermes Agent (Phase 3a).
+- `max_instances=1` sur chaque job : pas de chevauchement si un job prend du retard.
+- `misfire_grace_time` : digest=5min, poll=1min, user_messages=30s.
 
 ---
 
@@ -201,10 +206,7 @@ UserMessage en DB (state: user_message_received)
 
 ## Prochaine étape recommandée
 
-**Phase 2c + 2d** en parallèle :
-1. Créer `newsletter-engine/api/routes.py` avec les endpoints Hermes.
-2. Ajouter APScheduler à `newsletter-engine/main.py`.
-3. Tester le tout avant de s'attaquer à la configuration Hermes Agent (Phase 3).
+**Phase 2d** : créer `newsletter-engine/api/routes.py` avec les endpoints Hermes (send-email, mark-digest-sent, update-processing-state, hermes/emails, hermes/preferences, etc.). Ensuite Phase 3a : configuration Hermes Agent.
 
 ---
 
