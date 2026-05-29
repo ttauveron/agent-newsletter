@@ -157,6 +157,12 @@ Référence principale : [PLAN.md](PLAN.md) | [SPECS.md](SPECS.md) | [decisions_
 - **`scheduler.py`** : le webhook `user-message` reçoit maintenant `content` en plus de `message_id` et `subject`, conformément au template Hermes.
 - **Tests** : `test_scheduler.py` vérifie le champ `content` dans le payload transmis à Hermes.
 
+### Correction #9 — Newsletters transférées ✅
+
+- **`processing/whitelist.py`** : les emails de l'utilisateur autorisé dont le sujet commence par `Fwd:`, `FW:`, `Tr:`, `Transf:` ou `WG:` sont routés comme newsletters avec la catégorie `forwarded_newsletter`.
+- **`gmail/poller.py`** : le sujet parsé est transmis au filtre de routage.
+- **Tests** : `test_whitelist.py` couvre les sujets transférés et les messages utilisateur normaux.
+
 ### À valider
 
 - Démarrage du conteneur Hermes (`docker compose up hermes`) — flux digest et conversationnel end-to-end (tâches #5 et #6).

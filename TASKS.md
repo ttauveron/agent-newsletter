@@ -1,6 +1,6 @@
 # Tâches de suivi
 
-## Ouvertes
+## Suivi
 
 ### #8 — Corriger le payload du webhook `user-message`
 
@@ -22,7 +22,7 @@ Transmettre le contenu du `UserMessage` au webhook Hermes, ou ajuster explicitem
 
 ### #9 — Router les newsletters transférées par l'utilisateur
 
-**État** : À faire
+**État** : Terminée
 
 **Contexte**
 

@@ -58,7 +58,7 @@ def _process_message(
 
     message = gmail_client.get_message(message_id)
     parsed = parse_message(message)
-    result = whitelist.classify(parsed.sender_email)
+    result = whitelist.classify(parsed.sender_email, parsed.subject)
 
     if result.action == EmailAction.ignored:
         stats["ignored"] += 1

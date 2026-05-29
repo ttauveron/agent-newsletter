@@ -4,6 +4,9 @@ from typing import Optional
 
 from config import Settings, SourcesConfig
 
+_FORWARD_PREFIXES = ("fwd:", "fw:", "tr:", "transf:", "wg:")
+_FORWARDED_CATEGORY = "forwarded_newsletter"
+
 
 class EmailAction(str, Enum):
     newsletter = "newsletter"
@@ -22,10 +25,12 @@ class WhitelistFilter:
         self._authorized_user = settings.email.authorized_user_address.lower()
         self._rules = sources.sources
 
-    def classify(self, sender_email: str) -> WhitelistResult:
+    def classify(self, sender_email: str, subject: str | None = None) -> WhitelistResult:
         email_lower = sender_email.lower()
 
         if self._authorized_user and email_lower == self._authorized_user:
+            if _is_forwarded_subject(subject):
+                return WhitelistResult(action=EmailAction.newsletter, category=_FORWARDED_CATEGORY)
             return WhitelistResult(action=EmailAction.user_message)
 
         sender_domain = email_lower.split("@")[-1] if "@" in email_lower else ""
@@ -37,3 +42,9 @@ class WhitelistFilter:
                 return WhitelistResult(action=EmailAction.newsletter, category=rule.category)
 
         return WhitelistResult(action=EmailAction.ignored)
+
+
+def _is_forwarded_subject(subject: str | None) -> bool:
+    if not subject:
+        return False
+    return subject.strip().lower().startswith(_FORWARD_PREFIXES)

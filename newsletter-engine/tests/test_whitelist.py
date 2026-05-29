@@ -21,6 +21,31 @@ def test_authorized_user_case_insensitive():
     assert f.classify("USER@PERSONAL.COM").action == EmailAction.user_message
 
 
+def test_authorized_user_forwarded_subject_is_newsletter():
+    f = make_filter(authorized_user="user@personal.com")
+    result = f.classify("user@personal.com", "Fwd: Weekly Security Brief")
+    assert result.action == EmailAction.newsletter
+    assert result.category == "forwarded_newsletter"
+
+
+def test_authorized_user_forwarded_prefixes_are_newsletters():
+    f = make_filter(authorized_user="user@personal.com")
+    for subject in [
+        "FW: Cloud newsletter",
+        "Tr: Bulletin cyber",
+        "Transf: Bulletin cyber",
+        "WG: Sicherheitsbericht",
+    ]:
+        assert f.classify("user@personal.com", subject).action == EmailAction.newsletter
+
+
+def test_authorized_user_non_forwarded_subject_stays_user_message():
+    f = make_filter(authorized_user="user@personal.com")
+    assert f.classify("user@personal.com", "Weekly summary please").action == (
+        EmailAction.user_message
+    )
+
+
 def test_empty_authorized_user_not_matched():
     f = make_filter(authorized_user="")
     assert f.classify("someone@example.com").action == EmailAction.ignored
