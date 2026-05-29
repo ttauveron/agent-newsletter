@@ -204,3 +204,22 @@ def test_enrich_email_returns_none_on_invalid_json():
     result = enrich_email(email, session, client)
 
     assert result is None
+
+
+def test_enrich_email_local_backend(monkeypatch):
+    from db.models import EmailState
+
+    monkeypatch.setenv("ENRICHMENT_BACKEND", "local")
+    email = _make_email(cleaned_content="Local content.", source_category="cloud_security")
+    email.id = uuid.uuid4()
+    session = MagicMock()
+    client = MagicMock()
+
+    result = enrich_email(email, session, client)
+
+    assert result is not None
+    assert result.summary_text == "Local content."
+    assert result.model_used == "local-e2e"
+    assert result.tags == ["cloud_security"]
+    assert email.processing_state == EmailState.ready_for_hermes
+    client.messages.create.assert_not_called()

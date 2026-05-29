@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 from typing import Optional
 
 from anthropic import Anthropic
@@ -56,6 +57,17 @@ def _parse_response(text: str) -> dict:
 
 def enrich_email(email: Email, session: Session, client: Anthropic) -> Optional[Summary]:
     """Call Haiku to summarize and tag a cleaned email. Returns None on failure (non-fatal)."""
+    if os.environ.get("ENRICHMENT_BACKEND", "anthropic").lower() == "local":
+        data = _local_enrichment(email)
+        return _store_summary(
+            email=email,
+            session=session,
+            data=data,
+            model_used="local-e2e",
+            tokens_input=0,
+            tokens_output=0,
+        )
+
     try:
         response = client.messages.create(
             model="claude-haiku-4-5-20251001",
@@ -67,14 +79,42 @@ def enrich_email(email: Email, session: Session, client: Anthropic) -> Optional[
         logger.exception("Enrichment failed for email %s — staying in cleaned state", email.id)
         return None
 
+    return _store_summary(
+        email=email,
+        session=session,
+        data=data,
+        model_used=response.model,
+        tokens_input=response.usage.input_tokens,
+        tokens_output=response.usage.output_tokens,
+    )
+
+
+def _local_enrichment(email: Email) -> dict:
+    content = (email.cleaned_content or "").strip()
+    summary = _truncate(content, max_chars=240) if content else email.subject or "Local summary."
+    return {
+        "summary": summary,
+        "key_points": [summary],
+        "tags": [email.source_category or "local"],
+    }
+
+
+def _store_summary(
+    email: Email,
+    session: Session,
+    data: dict,
+    model_used: str,
+    tokens_input: int,
+    tokens_output: int,
+) -> Summary:
     summary = Summary(
         email_id=email.id,
         summary_text=data["summary"],
         key_points=data["key_points"],
         tags=data["tags"],
-        model_used=response.model,
-        tokens_input=response.usage.input_tokens,
-        tokens_output=response.usage.output_tokens,
+        model_used=model_used,
+        tokens_input=tokens_input,
+        tokens_output=tokens_output,
     )
     session.add(summary)
 
@@ -95,9 +135,9 @@ def enrich_email(email: Email, session: Session, client: Anthropic) -> Optional[
         entity_type="email",
         entity_id=email.id,
         payload={
-            "model": response.model,
-            "tokens_input": response.usage.input_tokens,
-            "tokens_output": response.usage.output_tokens,
+            "model": model_used,
+            "tokens_input": tokens_input,
+            "tokens_output": tokens_output,
             "tags": data["tags"],
         },
     )
@@ -106,6 +146,6 @@ def enrich_email(email: Email, session: Session, client: Anthropic) -> Optional[
         "Enriched email %s: %d tags, %d tokens total",
         email.id,
         len(data["tags"]),
-        response.usage.input_tokens + response.usage.output_tokens,
+        tokens_input + tokens_output,
     )
     return summary

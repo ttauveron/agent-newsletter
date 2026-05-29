@@ -1,0 +1,3 @@
+sources:
+  - match: "newsletter@example.com"
+    category: "cloud_security"

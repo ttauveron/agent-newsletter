@@ -183,3 +183,31 @@ Suite complete :
 ```bash
 cd newsletter-engine && uv run ruff check . && uv run ruff format --check . && uv run bandit -r config.py main.py gmail/ processing/ db/ -q && uv run pytest -q
 ```
+
+## Test end-to-end sans Gmail
+
+Le mode e2e local remplace Gmail par une mailbox fichier dans le conteneur
+`newsletter-engine`. Il permet d'injecter des emails entrants via l'API dev,
+de déclencher le poller réel, puis de vérifier la base et l'outbox locale.
+Le service est exposé sur `http://127.0.0.1:18000` pour éviter les conflits
+avec un serveur de développement déjà lancé sur `8000`.
+
+```bash
+scripts/e2e-local-mailbox.sh
+```
+
+Ce scénario utilise `docker-compose.e2e.yml`, la configuration `config/e2e/`,
+et active :
+
+```env
+EMAIL_BACKEND=local
+ENRICHMENT_BACKEND=local
+LOCAL_MAILBOX_DIR=/app/mailbox
+```
+
+Endpoints disponibles uniquement avec le backend local :
+
+```text
+POST /dev/emails   # injecte un email entrant
+GET  /dev/outbox   # inspecte les emails sortants
+```
