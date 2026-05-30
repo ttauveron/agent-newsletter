@@ -5,10 +5,27 @@ services:
       ENRICHMENT_BACKEND: local
       LOCAL_MAILBOX_DIR: /app/mailbox
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-dummy-e2e-key}
-      HERMES_WEBHOOK_URL: http://127.0.0.1:9
+      HERMES_WEBHOOK_URL: http://hermes-stub:8644
     volumes:
       - ./config/e2e:/app/config:ro
       - e2e_mailbox:/app/mailbox
+
+  hermes-stub:
+    build:
+      context: hermes-stub
+    environment:
+      DATABASE_URL: postgresql://${HERMES_DB_USER:-hermes_readonly}:${HERMES_DB_PASSWORD:-e2e_hermes}@postgres:5432/${POSTGRES_DB:-hermes_db}
+      NEWSLETTER_ENGINE_URL: http://newsletter-engine:8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      newsletter-engine:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8644/health')\""]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
 volumes:
   e2e_mailbox:

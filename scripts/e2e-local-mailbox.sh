@@ -22,7 +22,7 @@ cleanup() {
 
 trap cleanup EXIT
 
-"${compose[@]}" up -d --build postgres newsletter-engine
+"${compose[@]}" up -d --build postgres newsletter-engine hermes-stub
 
 for _ in $(seq 1 30); do
   if curl -fs "$api/health" >/dev/null 2>&1; then
@@ -33,6 +33,7 @@ done
 
 curl -fsS "$api/health" >/dev/null
 
+# Inject a newsletter, a user message for the direct-API test, and one for the stub test
 curl -fsS -X POST "$api/dev/emails" \
   -H "Content-Type: application/json" \
   -d '{"message_id":"newsletter-1","sender_email":"newsletter@example.com","subject":"Security Weekly","body":"IAM and cloud security update."}' \
@@ -41,6 +42,11 @@ curl -fsS -X POST "$api/dev/emails" \
 curl -fsS -X POST "$api/dev/emails" \
   -H "Content-Type: application/json" \
   -d '{"message_id":"user-1","sender_email":"user@example.com","subject":"Question","body":"What happened this week?"}' \
+  >/dev/null
+
+curl -fsS -X POST "$api/dev/emails" \
+  -H "Content-Type: application/json" \
+  -d '{"message_id":"user-2","sender_email":"user@example.com","subject":"Stub test","body":"This message is handled by the Hermes stub."}' \
   >/dev/null
 
 curl -fsS -X POST "$api/trigger/poll" >/dev/null
@@ -79,6 +85,7 @@ if [[ "$hermes_email_count" != "1" ]]; then
   exit 1
 fi
 
+# Direct API test: send-reply without going through Hermes
 curl -fsS -X POST "$api/actions/send-reply" \
   -H "Content-Type: application/json" \
   -d "{\"user_message_id\":\"$user_message_id\",\"content\":\"Local e2e reply.\"}" \
@@ -86,7 +93,25 @@ curl -fsS -X POST "$api/actions/send-reply" \
 
 outbox=$(curl -fsS "$api/dev/outbox")
 if [[ "$outbox" != *"Local e2e reply."* ]]; then
-  echo "Expected local outbox to contain the reply" >&2
+  echo "Expected local outbox to contain the direct reply" >&2
+  exit 1
+fi
+
+# Stub test: user-message flow — user-2 is still in user_message_received, user-1 is answered
+curl -fsS -X POST "$api/trigger/check-messages" >/dev/null
+
+stub_reply_outbox=$(curl -fsS "$api/dev/outbox")
+if [[ "$stub_reply_outbox" != *"Stub e2e reply"* ]]; then
+  echo "Expected local outbox to contain the stub reply" >&2
+  exit 1
+fi
+
+# Stub test: digest flow
+curl -fsS -X POST "$api/trigger/digest" >/dev/null
+
+digest_outbox=$(curl -fsS "$api/dev/outbox")
+if [[ "$digest_outbox" != *"Stub e2e digest"* ]]; then
+  echo "Expected local outbox to contain the stub digest" >&2
   exit 1
 fi
 
