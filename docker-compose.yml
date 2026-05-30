@@ -52,7 +52,8 @@ services:
       dockerfile: newsletter-engine/Dockerfile
     environment:
       DATABASE_URL: postgresql://${NEWSLETTER_ENGINE_DB_USER}:${NEWSLETTER_ENGINE_DB_PASSWORD}@postgres:5432/${POSTGRES_DB}
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      LITELLM_BASE_URL: http://litellm:4000/v1
+      LITELLM_ENRICHMENT_KEY: ${LITELLM_ENRICHMENT_KEY}
       EMAIL_BACKEND: ${EMAIL_BACKEND:-gmail}
       LOCAL_MAILBOX_DIR: ${LOCAL_MAILBOX_DIR:-/app/config/dev_mailbox}
       ENRICHMENT_BACKEND: ${ENRICHMENT_BACKEND:-anthropic}

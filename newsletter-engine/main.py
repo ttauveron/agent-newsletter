@@ -1,8 +1,9 @@
 import logging
+import os
 from contextlib import asynccontextmanager
 
-from anthropic import Anthropic
 from fastapi import FastAPI, HTTPException
+from openai import OpenAI
 
 from api.dev_routes import create_dev_router
 from api.routes import create_router
@@ -21,7 +22,10 @@ settings = load_settings()
 sources = load_sources()
 whitelist = WhitelistFilter(settings, sources)
 gmail_client = create_email_client()
-anthropic_client = Anthropic()
+enrichment_client = OpenAI(
+    base_url=os.environ.get("LITELLM_BASE_URL", "http://litellm:4000/v1"),
+    api_key=os.environ.get("LITELLM_ENRICHMENT_KEY", ""),
+)
 
 
 @asynccontextmanager
@@ -29,7 +33,7 @@ async def lifespan(app: FastAPI):
     with get_session() as session:
         digest_schedule, digest_timezone = load_digest_config(session)
     scheduler = create_scheduler(
-        digest_schedule, digest_timezone, gmail_client, whitelist, anthropic_client
+        digest_schedule, digest_timezone, gmail_client, whitelist, enrichment_client
     )
     app.state.scheduler = scheduler
     app.state.gmail_client = gmail_client
@@ -56,7 +60,7 @@ def health():
 def trigger_poll():
     try:
         with get_session() as session:
-            stats = poll(gmail_client, whitelist, session, anthropic_client)
+            stats = poll(gmail_client, whitelist, session, enrichment_client)
         return {"status": "ok", "stats": stats}
     except Exception as e:
         logger.exception("Poll failed")

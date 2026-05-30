@@ -3,7 +3,7 @@ import logging
 import os
 from typing import Optional
 
-from anthropic import Anthropic
+from openai import OpenAI
 from sqlalchemy.orm import Session
 
 from db.models import Email, EmailState, Summary
@@ -58,9 +58,8 @@ def _parse_response(text: str) -> dict:
     }
 
 
-def enrich_email(email: Email, session: Session, client: Anthropic) -> Optional[Summary]:
-    """Call Haiku to summarize and tag a cleaned email. Returns None on failure (non-fatal)."""
-    if os.environ.get("ENRICHMENT_BACKEND", "anthropic").lower() == "local":
+def enrich_email(email: Email, session: Session, client: OpenAI) -> Optional[Summary]:
+    if os.environ.get("ENRICHMENT_BACKEND", "").lower() == "local":
         data = _local_enrichment(email)
         return _store_summary(
             email=email,
@@ -72,12 +71,12 @@ def enrich_email(email: Email, session: Session, client: Anthropic) -> Optional[
         )
 
     try:
-        response = client.messages.create(
-            model="claude-haiku-4-5-20251001",
+        response = client.chat.completions.create(
+            model="enrichment",
             max_tokens=512,
             messages=[{"role": "user", "content": _build_prompt(email)}],
         )
-        data = _parse_response(response.content[0].text)
+        data = _parse_response(response.choices[0].message.content)
     except Exception:
         logger.exception("Enrichment failed for email %s — staying in cleaned state", email.id)
         return None
@@ -87,8 +86,8 @@ def enrich_email(email: Email, session: Session, client: Anthropic) -> Optional[
         session=session,
         data=data,
         model_used=response.model,
-        tokens_input=response.usage.input_tokens,
-        tokens_output=response.usage.output_tokens,
+        tokens_input=response.usage.prompt_tokens,
+        tokens_output=response.usage.completion_tokens,
     )
 
 

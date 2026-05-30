@@ -6,9 +6,9 @@ import os
 from datetime import date
 
 import httpx
-from anthropic import Anthropic
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+from openai import OpenAI
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -80,11 +80,11 @@ async def _run_daily_digest() -> None:
 async def _run_gmail_poll(
     gmail_client: GmailClient,
     whitelist: WhitelistFilter,
-    anthropic_client: Anthropic,
+    enrichment_client: OpenAI,
 ) -> None:
     try:
         with get_session() as session:
-            gmail_poll(gmail_client, whitelist, session, anthropic_client)
+            gmail_poll(gmail_client, whitelist, session, enrichment_client)
     except Exception:
         logger.exception("Scheduled Gmail poll failed")
 
@@ -122,7 +122,7 @@ def create_scheduler(
     digest_timezone: str,
     gmail_client: GmailClient,
     whitelist: WhitelistFilter,
-    anthropic_client: Anthropic,
+    enrichment_client: OpenAI,
 ) -> AsyncIOScheduler:
     scheduler = AsyncIOScheduler()
 
@@ -139,7 +139,7 @@ def create_scheduler(
         _run_gmail_poll,
         "interval",
         minutes=POLL_INTERVAL_MINUTES,
-        args=[gmail_client, whitelist, anthropic_client],
+        args=[gmail_client, whitelist, enrichment_client],
         id="gmail_poll",
         name="Gmail polling",
         misfire_grace_time=60,
