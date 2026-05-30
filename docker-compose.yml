@@ -69,6 +69,7 @@ services:
       retries: 3
     networks:
       - backend
+      - public
 
   hermes:
     image: nousresearch/hermes-agent:latest
