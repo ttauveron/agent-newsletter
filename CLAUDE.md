@@ -56,6 +56,9 @@ cd newsletter-engine && uv run ruff check . && uv run ruff format --check . && u
 cp .env.example .env
 # Remplir les valeurs dans .env
 
+cp config/settings.yaml.example config/settings.yaml
+# Remplir les valeurs dans config/settings.yaml
+
 docker compose up
 ```
 
