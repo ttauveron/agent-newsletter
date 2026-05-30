@@ -1,4 +1,5 @@
 .env
+config/settings.yaml
 config/gmail_token.json
 config/client_secret.json
 secrets.txt

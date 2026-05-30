@@ -5,7 +5,12 @@ prepare un digest personnalise via Hermes Agent.
 
 ## Configuration email
 
-La configuration fonctionnelle se trouve dans `config/settings.yaml`.
+La configuration fonctionnelle se trouve dans `config/settings.yaml` (ignoré par Git).
+Copier l'exemple avant le premier démarrage :
+
+```bash
+cp config/settings.yaml.example config/settings.yaml
+```
 
 ```yaml
 digest:
@@ -154,9 +159,13 @@ Ce fichier est ignore par Git et ne doit pas etre commite.
 
 ## Demarrage
 
-Apres creation de `.env`, du `client_secret.json` et du `gmail_token.json` :
+Apres creation de `.env`, de `config/settings.yaml`, du `client_secret.json` et du `gmail_token.json` :
 
 ```bash
+cp .env.example .env
+cp config/settings.yaml.example config/settings.yaml
+# Remplir les valeurs dans .env et config/settings.yaml
+
 docker compose up
 ```
 
