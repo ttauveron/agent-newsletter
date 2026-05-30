@@ -32,6 +32,8 @@ services:
       DATABASE_URL: postgresql://${LITELLM_DB_USER}:${LITELLM_DB_PASSWORD}@postgres:5432/${LITELLM_DB_NAME}
     volumes:
       - ./litellm/config.yaml:/app/config.yaml:ro
+    ports:
+      - "127.0.0.1:4000:4000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -39,7 +41,7 @@ services:
       - backend
       - public
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:4000/health || exit 1"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:4000/health/liveliness')\" 2>/dev/null || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
