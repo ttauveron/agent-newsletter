@@ -12,7 +12,7 @@ from gmail.factory import create_email_client
 from gmail.local_client import LocalEmailClient
 from gmail.poller import poll
 from processing.whitelist import WhitelistFilter
-from scheduler import create_scheduler, load_digest_config
+from scheduler import _check_user_messages, _run_daily_digest, create_scheduler, load_digest_config
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -60,4 +60,24 @@ def trigger_poll():
         return {"status": "ok", "stats": stats}
     except Exception as e:
         logger.exception("Poll failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/trigger/digest")
+async def trigger_digest():
+    try:
+        await _run_daily_digest()
+        return {"status": "ok"}
+    except Exception as e:
+        logger.exception("Digest trigger failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/trigger/check-messages")
+async def trigger_check_messages():
+    try:
+        await _check_user_messages()
+        return {"status": "ok"}
+    except Exception as e:
+        logger.exception("Check messages trigger failed")
         raise HTTPException(status_code=500, detail=str(e))
