@@ -66,7 +66,7 @@ class GmailClient:
         in_reply_to: Optional[str] = None,
         thread_id: Optional[str] = None,
     ) -> None:
-        msg = MIMEText(body, "plain", "utf-8")
+        msg = MIMEText(body, "html", "utf-8")
         msg["to"] = to
         msg["subject"] = subject
         if in_reply_to:
