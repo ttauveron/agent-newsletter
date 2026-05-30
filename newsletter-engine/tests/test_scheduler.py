@@ -39,7 +39,10 @@ def test_wake_hermes_posts_to_webhook_url():
     mock_client.post.assert_called_once()
     url, *_ = mock_client.post.call_args.args
     assert url == "http://test-hermes:9999/webhooks/daily-digest"
-    assert mock_client.post.call_args.kwargs["json"]["event"] == "daily-digest"
+    import json as _json
+
+    body = mock_client.post.call_args.kwargs["content"]
+    assert _json.loads(body)["event"] == "daily-digest"
 
 
 def test_wake_hermes_does_not_raise_on_connection_error():

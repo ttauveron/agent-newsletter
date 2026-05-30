@@ -1,3 +1,6 @@
+import hashlib
+import hmac
+import json as _json
 import logging
 import os
 from datetime import date
@@ -41,11 +44,17 @@ def reschedule_digest(scheduler: AsyncIOScheduler, schedule: str, timezone: str)
 
 async def _wake_hermes(payload: dict) -> None:
     hermes_url = os.environ.get("HERMES_WEBHOOK_URL", "http://hermes:8644")
+    secret = os.environ.get("HERMES_WEBHOOK_SECRET", "")
     event = payload.get("event", "unknown")
     endpoint = f"{hermes_url}/webhooks/{event}"
+    body = _json.dumps(payload).encode()
+    headers = {"Content-Type": "application/json"}
+    if secret:
+        sig = "sha256=" + hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
+        headers["X-Hub-Signature-256"] = sig
     try:
         async with httpx.AsyncClient() as client:
-            r = await client.post(endpoint, json=payload, timeout=10)
+            r = await client.post(endpoint, content=body, headers=headers, timeout=30)
             r.raise_for_status()
             logger.info("Hermes woken: event=%s", event)
     except Exception:

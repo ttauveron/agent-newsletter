@@ -148,9 +148,14 @@ Référence principale : [PLAN.md](PLAN.md) | [SPECS.md](SPECS.md) | [decisions_
 - **`hermes/config.yaml`** : provider `anthropic` / modèle `claude-sonnet-4-6`, terminal `local`, webhooks sur port 8644 avec deux routes :
   - `daily-digest` : prompt guidant Hermes à requêter la DB, lire les Markdown config, générer et envoyer le digest via `POST /actions/send-digest`.
   - `user-message` : prompt guidant Hermes à interpréter le message (SQL, préférences, réponse directe) et répondre via `POST /actions/send-reply`.
-- **`docker-compose.yml`** : port 8644 exposé, `hermes/config.yaml` monté en `:ro` à `/root/.hermes/config.yaml`, `./config` monté en `:ro` à `/app/config`, `API_SERVER_ENABLED/KEY` ajoutés, `HERMES_WEBHOOK_URL=http://hermes:8644` pour newsletter-engine.
-- **`.env.example`** : `HERMES_API_KEY` ajouté, `HERMES_URL` → `HERMES_WEBHOOK_URL`.
-- **`scheduler.py`** : `_wake_hermes` lit `HERMES_WEBHOOK_URL` (port 8644) au lieu de `HERMES_URL`.
+- **`docker-compose.yml`** : port 8644 exposé, `hermes/config.yaml` monté en `:ro` à `/root/.hermes/config.yaml` et `/opt/data/config.yaml`, `./config` monté en `:ro` à `/app/config`, webhook platform activée, `HERMES_WEBHOOK_URL=http://hermes:8644` pour newsletter-engine.
+- **`.env.example`** : `HERMES_API_KEY` et `HERMES_WEBHOOK_SECRET` ajoutés, `HERMES_URL` → `HERMES_WEBHOOK_URL`.
+- **`scheduler.py`** : `_wake_hermes` lit `HERMES_WEBHOOK_URL` (port 8644), signe les payloads webhook avec `HERMES_WEBHOOK_SECRET` si présent et envoie le JSON brut attendu par Hermes.
+
+### Correction locale — Réponses enrichissement clôturées par Markdown ✅
+
+- **`processing/enrichment.py`** : `_parse_response()` accepte les réponses JSON entourées de fences Markdown (` ```json ... ``` `), cas fréquent avec certains modèles.
+- **Tests** : `test_enrichment.py` couvre les fences typées et non typées.
 
 ### Correction #8 — Payload `user-message` ✅
 
