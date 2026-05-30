@@ -1,5 +1,5 @@
 model:
-  provider: "openai"
+  provider: "custom"
   default: "hermes"
   base_url: "http://litellm:4000/v1"
   api_key: "${LITELLM_HERMES_KEY}"
