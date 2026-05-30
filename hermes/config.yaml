@@ -3,6 +3,13 @@ model:
   default: "claude-sonnet-4-6"
   context_length: 200000
 
+platform_toolsets:
+  webhook:
+    - terminal
+    - file
+    - web
+    - code_execution
+
 terminal:
   backend: local
   timeout: 120
@@ -19,6 +26,7 @@ platforms:
     enabled: true
     extra:
       port: 8644
+      secret: "${HERMES_WEBHOOK_SECRET}"
       routes:
         daily-digest:
           prompt: |

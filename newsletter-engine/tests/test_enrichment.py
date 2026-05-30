@@ -69,6 +69,21 @@ def test_parse_response_invalid_json_raises():
         _parse_response("not json at all")
 
 
+def test_parse_response_strips_markdown_fences():
+    payload = {"summary": "S", "key_points": ["p1"], "tags": ["t1"]}
+    text = f"```json\n{json.dumps(payload)}\n```"
+    result = _parse_response(text)
+    assert result["summary"] == "S"
+    assert result["tags"] == ["t1"]
+
+
+def test_parse_response_strips_plain_fences():
+    payload = {"summary": "S", "key_points": [], "tags": []}
+    text = f"```\n{json.dumps(payload)}\n```"
+    result = _parse_response(text)
+    assert result["summary"] == "S"
+
+
 def test_parse_response_summary_coerced_to_string():
     text = json.dumps({"summary": 42})
     result = _parse_response(text)

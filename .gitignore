@@ -2,6 +2,7 @@
 config/gmail_token.json
 config/client_secret.json
 secrets.txt
+hermes/webhook_subscriptions.json
 __pycache__/
 *.pyc
 *.pyo

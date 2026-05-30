@@ -47,6 +47,9 @@ def _build_prompt(email: Email) -> str:
 
 
 def _parse_response(text: str) -> dict:
+    text = text.strip()
+    if text.startswith("```"):
+        text = text.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
     data = json.loads(text)
     return {
         "summary": str(data.get("summary", "")),
