@@ -9,6 +9,9 @@ services:
       NEWSLETTER_ENGINE_DB_PASSWORD: ${NEWSLETTER_ENGINE_DB_PASSWORD}
       HERMES_DB_USER: ${HERMES_DB_USER}
       HERMES_DB_PASSWORD: ${HERMES_DB_PASSWORD}
+      LITELLM_DB_USER: ${LITELLM_DB_USER}
+      LITELLM_DB_PASSWORD: ${LITELLM_DB_PASSWORD}
+      LITELLM_DB_NAME: ${LITELLM_DB_NAME}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./postgres/init.sh:/docker-entrypoint-initdb.d/init.sh
@@ -26,8 +29,12 @@ services:
     environment:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
+      DATABASE_URL: postgresql://${LITELLM_DB_USER}:${LITELLM_DB_PASSWORD}@postgres:5432/${LITELLM_DB_NAME}
     volumes:
       - ./litellm/config.yaml:/app/config.yaml:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - backend
       - public

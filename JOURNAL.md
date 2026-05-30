@@ -249,6 +249,18 @@ Référence principale : [PLAN.md](PLAN.md) | [SPECS.md](SPECS.md) | [decisions_
 
 **Point d'attention** : hermes sera non-fonctionnel jusqu'à #10 (migration provider LiteLLM). newsletter-engine garde encore `ANTHROPIC_API_KEY` pour l'enrichissement jusqu'à #9.
 
+### Issue #8 — Virtual keys LiteLLM par service ⏳ En review
+
+**PR** : [#18](https://github.com/ttauveron/agent-newsletter/pull/18)
+
+- Base `litellm_db` dédiée sur la même instance postgres — isolation totale des données métier.
+- Rôle `litellm` owner de `litellm_db`, aucun accès à `hermes_db`.
+- `postgres/init.sh` : création du rôle et de la base séparée (`CREATE DATABASE` hors transaction).
+- `docker-compose.yml` : `DATABASE_URL` de litellm pointe sur `litellm_db`.
+- Virtual key `hermes` (modèle `hermes` uniquement) et `enrichment` (modèle `enrichment` uniquement).
+- `scripts/litellm-init-keys.sh` : génération one-shot des clés (pattern identique à `gmail.auth`).
+- Décision documentée dans `decisions_architecture.md`.
+
 ### À faire
 
 - Valider que Hermes tourne en non-root (option `HERMES_UID`/`HERMES_GID` présente, à confirmer).
