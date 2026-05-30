@@ -59,6 +59,8 @@ def ingest_user_message(parsed: ParsedEmail, session: Session) -> UserMessage:
     msg = UserMessage(
         id=msg_id,
         gmail_message_id=parsed.gmail_message_id,
+        gmail_thread_id=parsed.gmail_thread_id or None,
+        rfc_message_id=parsed.rfc_message_id,
         sender_email=parsed.sender_email,
         subject=parsed.subject,
         content=parsed.raw_content,

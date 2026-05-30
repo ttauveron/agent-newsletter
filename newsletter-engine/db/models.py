@@ -117,6 +117,8 @@ class UserMessage(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     gmail_message_id: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    gmail_thread_id: Mapped[Optional[str]] = mapped_column(String(255))
+    rfc_message_id: Mapped[Optional[str]] = mapped_column(Text)
     sender_email: Mapped[str] = mapped_column(String(255), nullable=False)
     subject: Mapped[Optional[str]] = mapped_column(Text)
     content: Mapped[str] = mapped_column(Text, nullable=False)
