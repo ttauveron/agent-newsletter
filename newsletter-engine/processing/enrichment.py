@@ -1,6 +1,8 @@
 import json
 import logging
 import os
+from pathlib import Path
+from string import Template
 from typing import Optional
 
 from openai import OpenAI
@@ -13,22 +15,33 @@ logger = logging.getLogger(__name__)
 
 MAX_CONTENT_CHARS = 4000
 
-_PROMPT = """\
+_PROMPT_FILE = Path(os.environ.get("ENRICHMENT_PROMPT_PATH", "/app/config/prompts/enrichment.md"))
+
+
+# Load once at startup; restart required after editing the file.
+def _load_prompt_template() -> str:
+    if _PROMPT_FILE.exists():
+        return _PROMPT_FILE.read_text()
+    logger.warning("Enrichment prompt file not found at %s, using built-in fallback", _PROMPT_FILE)
+    return """\
 You are processing a newsletter email for a tech security professional.
 
-Subject: {subject}
-Sender: {sender_email}
-Category: {category}
+Subject: $subject
+Sender: $sender_email
+Category: $category
 
 Content:
-{content}
+$content
 
 Return JSON only, no other text:
-{{
+{
   "summary": "2-3 sentence factual summary of the main content",
   "key_points": ["3 to 5 key points as short sentences"],
   "tags": ["3 to 7 relevant topic tags"]
-}}"""
+}"""
+
+
+_PROMPT = _load_prompt_template()
 
 
 def _truncate(content: str, max_chars: int = MAX_CONTENT_CHARS) -> str:
@@ -38,7 +51,7 @@ def _truncate(content: str, max_chars: int = MAX_CONTENT_CHARS) -> str:
 
 
 def _build_prompt(email: Email) -> str:
-    return _PROMPT.format(
+    return Template(_PROMPT).safe_substitute(
         subject=email.subject or "",
         sender_email=email.sender_email,
         category=email.source_category or "",
