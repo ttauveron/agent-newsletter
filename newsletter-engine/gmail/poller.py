@@ -1,6 +1,6 @@
 import logging
 
-from anthropic import Anthropic
+from openai import OpenAI
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -19,7 +19,7 @@ def poll(
     gmail_client: GmailClient,
     whitelist: WhitelistFilter,
     session: Session,
-    anthropic_client: Anthropic,
+    enrichment_client: OpenAI,
 ) -> dict:
     messages = gmail_client.get_unread_messages()
     stats = {"newsletters": 0, "user_messages": 0, "ignored": 0, "duplicates": 0, "errors": 0}
@@ -27,7 +27,7 @@ def poll(
     for stub in messages:
         message_id = stub["id"]
         try:
-            _process_message(message_id, gmail_client, whitelist, session, anthropic_client, stats)
+            _process_message(message_id, gmail_client, whitelist, session, enrichment_client, stats)
         except Exception:
             logger.exception("Failed to process message %s", message_id)
             stats["errors"] += 1
@@ -42,7 +42,7 @@ def _process_message(
     gmail_client: GmailClient,
     whitelist: WhitelistFilter,
     session: Session,
-    anthropic_client: Anthropic,
+    enrichment_client: OpenAI,
     stats: dict,
 ) -> None:
     already_email = session.execute(
@@ -77,7 +77,7 @@ def _process_message(
 
     elif result.action == EmailAction.newsletter:
         email = ingest_newsletter(parsed, result, session)
-        enrich_email(email, session, anthropic_client)
+        enrich_email(email, session, enrichment_client)
         gmail_client.mark_as_read(message_id)
         stats["newsletters"] += 1
         logger.info(

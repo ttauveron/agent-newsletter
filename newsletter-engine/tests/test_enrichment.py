@@ -141,7 +141,7 @@ def test_build_prompt_handles_none_category():
 # --- enrich_email ---
 
 
-def _make_anthropic_mock(summary="Summary.", key_points=None, tags=None):
+def _make_openai_mock(summary="Summary.", key_points=None, tags=None):
     response_text = json.dumps(
         {
             "summary": summary,
@@ -150,10 +150,10 @@ def _make_anthropic_mock(summary="Summary.", key_points=None, tags=None):
         }
     )
     mock = MagicMock()
-    mock.messages.create.return_value = MagicMock(
-        content=[MagicMock(text=response_text)],
+    mock.chat.completions.create.return_value = MagicMock(
+        choices=[MagicMock(message=MagicMock(content=response_text))],
         model="claude-haiku-4-5-20251001",
-        usage=MagicMock(input_tokens=120, output_tokens=60),
+        usage=MagicMock(prompt_tokens=120, completion_tokens=60),
     )
     return mock
 
@@ -162,7 +162,7 @@ def test_enrich_email_returns_summary():
     email = _make_email()
     email.id = uuid.uuid4()
     session = MagicMock()
-    client = _make_anthropic_mock(summary="This is the summary.")
+    client = _make_openai_mock(summary="This is the summary.")
 
     result = enrich_email(email, session, client)
 
@@ -177,7 +177,7 @@ def test_enrich_email_adds_summary_to_session():
     email = _make_email()
     email.id = uuid.uuid4()
     session = MagicMock()
-    client = _make_anthropic_mock()
+    client = _make_openai_mock()
 
     enrich_email(email, session, client)
 
@@ -190,7 +190,7 @@ def test_enrich_email_sets_state_to_ready_for_hermes():
     email = _make_email()
     email.id = uuid.uuid4()
     session = MagicMock()
-    client = _make_anthropic_mock()
+    client = _make_openai_mock()
 
     enrich_email(email, session, client)
 
@@ -202,7 +202,7 @@ def test_enrich_email_returns_none_on_api_failure():
     email.id = uuid.uuid4()
     session = MagicMock()
     client = MagicMock()
-    client.messages.create.side_effect = Exception("API error")
+    client.chat.completions.create.side_effect = Exception("API error")
 
     result = enrich_email(email, session, client)
 
@@ -214,7 +214,9 @@ def test_enrich_email_returns_none_on_invalid_json():
     email.id = uuid.uuid4()
     session = MagicMock()
     client = MagicMock()
-    client.messages.create.return_value = MagicMock(content=[MagicMock(text="not json")])
+    client.chat.completions.create.return_value = MagicMock(
+        choices=[MagicMock(message=MagicMock(content="not json"))]
+    )
 
     result = enrich_email(email, session, client)
 
@@ -237,4 +239,4 @@ def test_enrich_email_local_backend(monkeypatch):
     assert result.model_used == "local-e2e"
     assert result.tags == ["cloud_security"]
     assert email.processing_state == EmailState.ready_for_hermes
-    client.messages.create.assert_not_called()
+    client.chat.completions.create.assert_not_called()
