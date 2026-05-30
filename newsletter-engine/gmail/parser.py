@@ -15,6 +15,7 @@ class ParsedEmail:
     received_at: datetime
     raw_content: str
     content_type: str  # "text/plain" or "text/html"
+    rfc_message_id: Optional[str] = None  # RFC 2822 Message-ID header, used for reply threading
 
 
 def _decode_part(part: dict) -> Optional[str]:
@@ -77,4 +78,5 @@ def parse_message(message: dict) -> ParsedEmail:
         received_at=received_at,
         raw_content=raw_content,
         content_type=content_type,
+        rfc_message_id=headers.get("message-id"),
     )

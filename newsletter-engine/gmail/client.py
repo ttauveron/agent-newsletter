@@ -1,6 +1,7 @@
 import base64
 from email.mime.text import MIMEText
 from pathlib import Path
+from typing import Optional
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -57,9 +58,22 @@ class GmailClient:
             body={"removeLabelIds": ["UNREAD"]},
         ).execute()
 
-    def send_email(self, to: str, subject: str, body: str) -> None:
+    def send_email(
+        self,
+        to: str,
+        subject: str,
+        body: str,
+        in_reply_to: Optional[str] = None,
+        thread_id: Optional[str] = None,
+    ) -> None:
         msg = MIMEText(body, "plain", "utf-8")
         msg["to"] = to
         msg["subject"] = subject
+        if in_reply_to:
+            msg["In-Reply-To"] = in_reply_to
+            msg["References"] = in_reply_to
         raw = base64.urlsafe_b64encode(msg.as_bytes()).decode()
-        self.service.users().messages().send(userId="me", body={"raw": raw}).execute()
+        api_body: dict = {"raw": raw}
+        if thread_id:
+            api_body["threadId"] = thread_id
+        self.service.users().messages().send(userId="me", body=api_body).execute()

@@ -94,7 +94,13 @@ def create_router(gmail_client: GmailClient, settings: Settings) -> APIRouter:
                 if original_subject.lower().startswith("re:")
                 else f"Re: {original_subject}"
             )
-            gmail_client.send_email(to=to, subject=subject, body=body.content)
+            gmail_client.send_email(
+                to=to,
+                subject=subject,
+                body=body.content,
+                in_reply_to=msg.rfc_message_id,
+                thread_id=msg.gmail_thread_id,
+            )
             msg.processing_state = UserMessageState.answered
             msg.hermes_response = body.content
             audit(
