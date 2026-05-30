@@ -9,8 +9,6 @@ platform_toolsets:
   webhook:
     - terminal
     - file
-    - web
-    - code_execution
 
 terminal:
   backend: local
