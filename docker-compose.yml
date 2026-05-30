@@ -106,6 +106,7 @@ services:
     volumes:
       - ./hermes/config.yaml:/root/.hermes/config.yaml:ro
       - ./hermes/config.yaml:/opt/data/config.yaml:ro
+      - ./hermes/SOUL.md:/root/.hermes/SOUL.md:ro
       - ./hermes/webhook_subscriptions.json:/opt/data/webhook_subscriptions.json:ro
       - ./config:/app/config:ro
       - hermes_data:/root/.hermes/data
