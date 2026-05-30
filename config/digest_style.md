@@ -1,11 +1,12 @@
-# Style du digest
+Format : HTML destiné à Gmail. Utiliser uniquement des balises HTML simples.
 
-## Format
-- Court et dense : maximum 5-7 items par digest
-- Chaque item : 2-3 phrases maximum
-- Signaux marché mis en avant explicitement
+Structure :
+- Titres de section : <b>Titre</b> suivi d'un <br>
+- Paragraphes : texte continu sans sauts de ligne manuels (\n), chaque paragraphe séparé par <br><br>
+- Points importants en gras : <b>texte</b>
+- Italique pour les métadonnées (source, date) : <i>texte</i>
+- Séparateur entre sections : <br><br>
 
-## Ton
-- Factuel, professionnel
-- Pas de paraphrase inutile
-- Mettre en valeur ce qui est actionnable
+Interdits : symboles Markdown (#, *, **, ---, `), retours à la ligne \n au milieu d'une phrase, balises complexes (<div>, <table>, <ul>).
+
+Ton : direct, dense, professionnel. Pas d'émojis sauf si pertinent. Texte qui coule naturellement comme un email.
