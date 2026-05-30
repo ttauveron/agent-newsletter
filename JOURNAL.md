@@ -14,7 +14,7 @@ Référence principale : [PLAN.md](PLAN.md) | [SPECS.md](SPECS.md) | [decisions_
 | 2c | Scheduler | **Terminée** |
 | 2d | API interne FastAPI | Partielle |
 | 3a | Déploiement Hermes Agent | **Terminée** |
-| 3b | Flux digest journalier | À faire |
+| 3b | Flux digest journalier | **Terminée** |
 | 3c | Flux conversationnel | À faire |
 | 4 | Configuration & préférences | Partielle (fichiers créés) |
 | 5 | Sécurité & observabilité | Partielle (base en place) |
@@ -132,7 +132,7 @@ Référence principale : [PLAN.md](PLAN.md) | [SPECS.md](SPECS.md) | [decisions_
 
 ---
 
-## Phase 3 — Hermes Agent ⏳ En cours
+## Phase 3 — Hermes Agent ✅ Flux digest validé
 
 ### Ce qu'on sait sur Hermes Agent (NousResearch)
 
@@ -168,19 +168,20 @@ Référence principale : [PLAN.md](PLAN.md) | [SPECS.md](SPECS.md) | [decisions_
 - **`gmail/poller.py`** : le sujet parsé est transmis au filtre de routage.
 - **Tests** : `test_whitelist.py` couvre les sujets transférés et les messages utilisateur normaux.
 
-### À valider
-
-- Démarrage du conteneur Hermes (`docker compose up hermes`) — flux digest et conversationnel end-to-end (tâches #5 et #6).
-
-### 3b — Flux digest journalier (révisé)
+### 3b — Flux digest journalier ✅ (validé 2026-05-30)
 
 ```
 1. Scheduler → POST /webhooks/daily-digest { date }
-2. Hermes → SQL SELECT emails + summaries WHERE ready_for_hermes
-3. Hermes → SQL SELECT app_settings + lit Markdown config
-4. Hermes génère le digest
+2. Hermes → psql "$DATABASE_URL" SELECT emails + summaries WHERE ready_for_hermes
+3. Hermes → psql "$DATABASE_URL" SELECT digest_id + lit Markdown config
+4. Hermes génère le digest (Sonnet 4.6 via LiteLLM)
 5. Hermes → POST /actions/send-digest → newsletter-engine envoie + marque digest_sent
 ```
+
+**Points d'attention découverts en test :**
+- `psycopg2` non installé dans Hermes, l'agent essayait Python → fix : `hermes/Dockerfile` custom avec `postgresql-client` pour avoir `psql` CLI.
+- Prompt mis à jour pour expliciter `psql "$DATABASE_URL" -t -A -c "SQL"` comme méthode d'accès DB.
+- L'agent s'auto-corrige sur les erreurs d'échappement JSON (write_file → curl @file).
 
 ### 3c — Flux conversationnel (révisé)
 
@@ -280,13 +281,11 @@ Référence principale : [PLAN.md](PLAN.md) | [SPECS.md](SPECS.md) | [decisions_
 
 ## Prochaine étape recommandée
 
-Bloc LiteLLM en cours — issues à traiter dans l'ordre :
+Flux digest validé end-to-end (2026-05-30). Prochaines priorités :
 
-- **#8** : Configurer le routing LiteLLM (virtual keys par service) — config déjà en place, affiner si besoin
-- **#9** : Migrer l'enrichissement newsletter-engine vers LiteLLM
-- **#10** : Configurer Hermes pour utiliser LiteLLM (débloquer hermes)
-- **#11** : Nettoyer les toolsets Hermes (retirer web et code_execution)
-- **#12** : Isolation réseau Docker pour Hermes (compléter #7)
+- **Phase 3c** : Valider le flux conversationnel (envoyer un message utilisateur et vérifier que Hermes répond)
+- **Réglage du digest** : ajuster `user_profile.md`, `digest_style.md`, `sources.yaml` pour affiner la sélection et le style éditorial
+- **Phase 5** : Audit logs actions Hermes, vérification non-root container
 
 ---
 
