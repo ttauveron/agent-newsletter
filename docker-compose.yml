@@ -82,7 +82,9 @@ services:
       - public
 
   hermes:
-    image: nousresearch/hermes-agent:latest
+    build:
+      context: ./hermes
+      dockerfile: Dockerfile
     command: gateway run
     environment:
       DATABASE_URL: postgresql://${HERMES_DB_USER}:${HERMES_DB_PASSWORD}@postgres:5432/${POSTGRES_DB}
