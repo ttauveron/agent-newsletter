@@ -1,3 +1,23 @@
+### Virtual keys LiteLLM par service
+
+**Décision** : chaque service reçoit une virtual key LiteLLM distincte avec restriction au(x) modèle(s) dont il a besoin. La `LITELLM_MASTER_KEY` n'est jamais distribuée aux services.
+
+| Service | Clé | Modèles autorisés |
+|---|---|---|
+| hermes | `LITELLM_HERMES_KEY` | `hermes` (claude-sonnet-4-6) |
+| newsletter-engine | `LITELLM_ENRICHMENT_KEY` | `enrichment` (claude-haiku-4-5) |
+
+Hermes est un agent autonome avec accès au terminal. Même si son prompt est injecté ou manipulé, sa virtual key ne lui permet pas d'appeler des modèles plus coûteux ou d'autres providers. La restriction est appliquée par LiteLLM côté proxy, pas côté client.
+
+Les virtual keys sont générées une seule fois via `scripts/litellm-init-keys.sh` (pattern identique à `gmail.auth`) et stockées dans `.env`. Elles persistent dans `litellm_db`, une base PostgreSQL dédiée sur la même instance — isolation totale des données métier de `hermes_db`. Le rôle `litellm` est owner de `litellm_db` et n'a aucun accès à `hermes_db`.
+
+Compromis :
+* gain : Hermes ne peut pas dériver vers des modèles non prévus même en cas de prompt injection ;
+* gain : le rôle `litellm` en DB n'a accès qu'à ses propres tables Prisma, pas aux données métier ;
+* sacrifice : setup initial légèrement plus complexe (une commande supplémentaire).
+
+---
+
 Hermès doit être traité comme un agent potentiellement manipulable.
 
 Le système ne cherche pas à garantir qu’Hermès ne subira jamais de prompt injection. Il cherche à garantir qu’une compromission logique d’Hermès ait un impact limité.
