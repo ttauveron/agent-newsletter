@@ -87,6 +87,7 @@ services:
     environment:
       DATABASE_URL: postgresql://${HERMES_DB_USER}:${HERMES_DB_PASSWORD}@postgres:5432/${POSTGRES_DB}
       NEWSLETTER_ENGINE_URL: http://newsletter-engine:8000
+      LITELLM_HERMES_KEY: ${LITELLM_HERMES_KEY}
       API_SERVER_ENABLED: "true"
       API_SERVER_HOST: "0.0.0.0"
       API_SERVER_KEY: ${HERMES_API_KEY}
