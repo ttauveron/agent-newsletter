@@ -196,11 +196,19 @@ Référence principale : [PLAN.md](PLAN.md) | [SPECS.md](SPECS.md) | [decisions_
 
 ### Ce qui existe
 
-- `config/settings.yaml` : structure en place (digest schedule + timezone + email + web.allowed_domains).
+- `config/settings.yaml` : ignoré par Git (voir `settings.yaml.example` pour la structure). À copier au setup.
 - `config/sources.yaml` : whitelist expéditeurs (exemples placeholder).
 - `config/user_profile.md` : créé.
 - `config/digest_style.md` : créé.
 - `config/learned_preferences.md` : créé.
+
+### Issue #14 — Gitignore config/settings.yaml ✅
+
+**Commit** : `fa14a4e` | **PR** : [#16](https://github.com/ttauveron/agent-newsletter/pull/16)
+
+- `config/settings.yaml.example` créé avec des valeurs placeholder.
+- `config/settings.yaml` désindexé du tracking git et ajouté au `.gitignore`.
+- Step de setup `cp config/settings.yaml.example config/settings.yaml` documenté dans `README.md` et `CLAUDE.md`.
 
 ### À compléter
 
@@ -228,9 +236,21 @@ Référence principale : [PLAN.md](PLAN.md) | [SPECS.md](SPECS.md) | [decisions_
 - Bandit configuré (scan sur `config.py main.py gmail/ processing/ db/`).
 - Hermes sans accès Gmail (accès uniquement via endpoints newsletter-engine).
 
+### Issue #7 — LiteLLM + isolation réseau Docker ⏳ En review
+
+**Commit** : `4e77595` | **PR** : [#17](https://github.com/ttauveron/agent-newsletter/pull/17)
+
+- Service `litellm` ajouté comme point de sortie unique vers les providers LLM.
+- Réseau `backend` (`internal: true`) : `postgres`, `newsletter-engine`, `hermes` — zéro accès internet direct.
+- Réseau `public` : `litellm` et `newsletter-engine` uniquement (newsletter-engine conserve l'accès internet pour Gmail).
+- `ANTHROPIC_API_KEY` supprimé de l'environnement `hermes` — tout l'accès LLM passe par LiteLLM.
+- `litellm/config.yaml` : modèles virtuels `hermes` (sonnet-4-6) et `enrichment` (haiku-4-5).
+- `LITELLM_MASTER_KEY` ajouté dans `.env.example`.
+
+**Point d'attention** : hermes sera non-fonctionnel jusqu'à #10 (migration provider LiteLLM). newsletter-engine garde encore `ANTHROPIC_API_KEY` pour l'enrichissement jusqu'à #9.
+
 ### À faire
 
-- Restreindre l'accès réseau sortant du conteneur Hermes (domaines whitelistés uniquement).
 - Valider que Hermes tourne en non-root (option `HERMES_UID`/`HERMES_GID` présente, à confirmer).
 - Vérifier que les secrets (tokens OAuth, API keys) ne sont pas accessibles depuis le conteneur Hermes.
 - Ajouter audit logs pour les actions Hermes : décision digest, email envoyé, préférence modifiée.
@@ -240,12 +260,13 @@ Référence principale : [PLAN.md](PLAN.md) | [SPECS.md](SPECS.md) | [decisions_
 
 ## Prochaine étape recommandée
 
-Ajouter d'abord le socle de test sans Gmail suivi dans GitHub Issues :
+Bloc LiteLLM en cours — issues à traiter dans l'ordre :
 
-- **Issue #1** : backend email local pour tests end-to-end sans Gmail
-- **Issue #2** : scénario e2e Docker avec mailbox locale
-
-Ensuite, reprendre **#5 et #6** : valider les flux digest et conversationnel end-to-end avec la mailbox locale. Puis **#7** : sécurité réseau.
+- **#8** : Configurer le routing LiteLLM (virtual keys par service) — config déjà en place, affiner si besoin
+- **#9** : Migrer l'enrichissement newsletter-engine vers LiteLLM
+- **#10** : Configurer Hermes pour utiliser LiteLLM (débloquer hermes)
+- **#11** : Nettoyer les toolsets Hermes (retirer web et code_execution)
+- **#12** : Isolation réseau Docker pour Hermes (compléter #7)
 
 ---
 
