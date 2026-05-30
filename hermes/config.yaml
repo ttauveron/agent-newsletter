@@ -66,13 +66,15 @@ platforms:
 
             ## Étape 4 — Envoyer
 
-            Envoie le digest via l'API newsletter-engine :
+            Envoie le digest via l'API newsletter-engine en incluant les IDs des emails sélectionnés
+            (pour qu'ils soient marqués comme traités et ne réapparaissent pas dans les prochains digests) :
 
             POST ${NEWSLETTER_ENGINE_URL}/actions/send-digest
             Content-Type: application/json
             {
               "digest_id": "<id récupéré à l'étape 1>",
-              "content": "<digest rédigé>"
+              "content": "<digest rédigé>",
+              "included_email_ids": ["<uuid email 1>", "<uuid email 2>", ...]
             }
 
         user-message:

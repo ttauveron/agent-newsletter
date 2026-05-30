@@ -8,7 +8,15 @@ from pydantic import BaseModel
 from sqlalchemy import select
 
 from config import CONFIG_DIR, Settings
-from db.models import AppSetting, Digest, DigestState, UserMessage, UserMessageState
+from db.models import (
+    AppSetting,
+    Digest,
+    DigestState,
+    Email,
+    EmailState,
+    UserMessage,
+    UserMessageState,
+)
 from db.session import get_session
 from gmail.client import GmailClient
 from processing.state import audit
@@ -29,6 +37,7 @@ _MARKDOWN_FILES = {
 class SendDigestRequest(BaseModel):
     digest_id: uuid.UUID
     content: str
+    included_email_ids: list[uuid.UUID] = []
 
 
 class SendReplyRequest(BaseModel):
@@ -70,12 +79,25 @@ def create_router(gmail_client: GmailClient, settings: Settings) -> APIRouter:
             digest.processing_state = DigestState.digest_sent
             digest.content = body.content
             digest.sent_at = datetime.now(timezone.utc)
+            digest.included_email_ids = [str(eid) for eid in body.included_email_ids]
+            if body.included_email_ids:
+                emails = (
+                    session.execute(
+                        select(Email).where(
+                            Email.id.in_([str(eid) for eid in body.included_email_ids])
+                        )
+                    )
+                    .scalars()
+                    .all()
+                )
+                for email in emails:
+                    email.processing_state = EmailState.sent_in_digest
             audit(
                 session,
                 event_type="digest_sent",
                 entity_type="digest",
                 entity_id=body.digest_id,
-                payload={"to": to, "subject": subject},
+                payload={"to": to, "subject": subject, "email_count": len(body.included_email_ids)},
             )
         return {"status": "ok", "digest_id": str(body.digest_id)}
 
