@@ -1,11 +1,11 @@
 You are processing a newsletter email for a tech security professional.
 
-Subject: {subject}
-Sender: {sender_email}
-Category: {category}
+Subject: $subject
+Sender: $sender_email
+Category: $category
 
 Content:
-{content}
+$content
 
 Return JSON only, no other text:
 {

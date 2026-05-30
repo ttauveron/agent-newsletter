@@ -2,6 +2,7 @@ import json
 import logging
 import os
 from pathlib import Path
+from string import Template
 from typing import Optional
 
 from openai import OpenAI
@@ -25,19 +26,19 @@ def _load_prompt_template() -> str:
     return """\
 You are processing a newsletter email for a tech security professional.
 
-Subject: {subject}
-Sender: {sender_email}
-Category: {category}
+Subject: $subject
+Sender: $sender_email
+Category: $category
 
 Content:
-{content}
+$content
 
 Return JSON only, no other text:
-{{
+{
   "summary": "2-3 sentence factual summary of the main content",
   "key_points": ["3 to 5 key points as short sentences"],
   "tags": ["3 to 7 relevant topic tags"]
-}}"""
+}"""
 
 
 _PROMPT = _load_prompt_template()
@@ -50,7 +51,7 @@ def _truncate(content: str, max_chars: int = MAX_CONTENT_CHARS) -> str:
 
 
 def _build_prompt(email: Email) -> str:
-    return _PROMPT.format(
+    return Template(_PROMPT).safe_substitute(
         subject=email.subject or "",
         sender_email=email.sender_email,
         category=email.source_category or "",
