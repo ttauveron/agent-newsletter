@@ -17,6 +17,25 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - backend
+
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
+    volumes:
+      - ./litellm/config.yaml:/app/config.yaml:ro
+    networks:
+      - backend
+      - public
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:4000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
 
   newsletter-engine:
     build:
@@ -37,6 +56,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      litellm:
+        condition: service_healthy
     volumes:
       - ./config:/app/config
     ports:
@@ -46,12 +67,13 @@ services:
       interval: 15s
       timeout: 5s
       retries: 3
+    networks:
+      - backend
 
   hermes:
     image: nousresearch/hermes-agent:latest
     command: gateway run
     environment:
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       DATABASE_URL: postgresql://${HERMES_DB_USER}:${HERMES_DB_PASSWORD}@postgres:5432/${POSTGRES_DB}
       NEWSLETTER_ENGINE_URL: http://newsletter-engine:8000
       API_SERVER_ENABLED: "true"
@@ -67,6 +89,8 @@ services:
         condition: service_healthy
       newsletter-engine:
         condition: service_healthy
+      litellm:
+        condition: service_healthy
     volumes:
       - ./hermes/config.yaml:/root/.hermes/config.yaml:ro
       - ./hermes/config.yaml:/opt/data/config.yaml:ro
@@ -76,7 +100,14 @@ services:
     ports:
       - "8642:8642"
       - "8644:8644"
+    networks:
+      - backend
 
 volumes:
   postgres_data:
   hermes_data:
+
+networks:
+  backend:
+    internal: true
+  public: {}
