@@ -249,6 +249,14 @@ Référence principale : [PLAN.md](PLAN.md) | [SPECS.md](SPECS.md) | [decisions_
 
 **Point d'attention** : hermes sera non-fonctionnel jusqu'à #10 (migration provider LiteLLM). newsletter-engine garde encore `ANTHROPIC_API_KEY` pour l'enrichissement jusqu'à #9.
 
+### Issue #10 — Configurer Hermes pour utiliser LiteLLM ✅
+
+**PR** : [#20](https://github.com/ttauveron/agent-newsletter/pull/20)
+
+- `hermes/config.yaml` : `provider: openai`, `default: hermes`, `base_url: http://litellm:4000/v1`, `api_key: ${LITELLM_HERMES_KEY}`
+- `docker-compose.yml` : `LITELLM_HERMES_KEY` ajouté à l'env hermes
+- Hermes n'a plus aucune clé Anthropic directe — tout passe par LiteLLM avec la virtual key restreinte au modèle `hermes`.
+
 ### Issue #8 — Virtual keys LiteLLM par service ⏳ En review
 
 **PR** : [#18](https://github.com/ttauveron/agent-newsletter/pull/18)
