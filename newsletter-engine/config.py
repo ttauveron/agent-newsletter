@@ -26,6 +26,7 @@ class DigestConfig(BaseModel):
 class EmailConfig(BaseModel):
     hermes_address: str = ""
     authorized_user_address: str = ""
+    self_forward_addresses: list[str] = []
 
 
 class WebConfig(BaseModel):

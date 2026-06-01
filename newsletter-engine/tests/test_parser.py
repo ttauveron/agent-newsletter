@@ -12,6 +12,7 @@ def make_message(
     msg_id: str = "msg123",
     thread_id: str = "thread123",
     from_header: str = "John Doe <john@example.com>",
+    to_header: str = None,
     subject: str = "Test Subject",
     date: str = "Mon, 01 Jan 2024 12:00:00 +0000",
     mime_type: str = "text/plain",
@@ -23,6 +24,8 @@ def make_message(
         {"name": "Subject", "value": subject},
         {"name": "Date", "value": date},
     ]
+    if to_header is not None:
+        headers.append({"name": "To", "value": to_header})
     payload: dict = {"headers": headers, "mimeType": mime_type}
     if parts is not None:
         payload["parts"] = parts
@@ -66,6 +69,29 @@ def test_sender_email_only_no_name():
 def test_sender_email_lowercased():
     parsed = parse_message(make_message(from_header="<JOHN@EXAMPLE.COM>"))
     assert parsed.sender_email == "john@example.com"
+
+
+# --- Recipient parsing ---
+
+
+def test_recipient_email_extracted():
+    parsed = parse_message(make_message(to_header="relay@personal.com"))
+    assert parsed.recipient_email == "relay@personal.com"
+
+
+def test_recipient_email_lowercased():
+    parsed = parse_message(make_message(to_header="RELAY@PERSONAL.COM"))
+    assert parsed.recipient_email == "relay@personal.com"
+
+
+def test_recipient_email_with_display_name():
+    parsed = parse_message(make_message(to_header="Bob <relay@personal.com>"))
+    assert parsed.recipient_email == "relay@personal.com"
+
+
+def test_recipient_email_none_when_missing():
+    parsed = parse_message(make_message())
+    assert parsed.recipient_email is None
 
 
 # --- Subject ---

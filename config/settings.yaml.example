@@ -5,6 +5,10 @@ digest:
 email:
   hermes_address: "hermes@example.com"
   authorized_user_address: "you@example.com"
+  # Personal addresses whose Gmail filters auto-forward newsletters here.
+  # Emails addressed To: these addresses are treated as forwarded newsletters.
+  self_forward_addresses: []
+  # - "you@gmail.com"
 
 web:
   allowed_domains: []

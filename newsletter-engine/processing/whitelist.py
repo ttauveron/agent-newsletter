@@ -23,15 +23,24 @@ class WhitelistResult:
 class WhitelistFilter:
     def __init__(self, settings: Settings, sources: SourcesConfig):
         self._authorized_user = settings.email.authorized_user_address.lower()
+        self._self_forward_addresses = {a.lower() for a in settings.email.self_forward_addresses}
         self._rules = sources.sources
 
-    def classify(self, sender_email: str, subject: str | None = None) -> WhitelistResult:
+    def classify(
+        self,
+        sender_email: str,
+        subject: str | None = None,
+        recipient_email: str | None = None,
+    ) -> WhitelistResult:
         email_lower = sender_email.lower()
 
         if self._authorized_user and email_lower == self._authorized_user:
             if _is_forwarded_subject(subject):
                 return WhitelistResult(action=EmailAction.newsletter, category=_FORWARDED_CATEGORY)
             return WhitelistResult(action=EmailAction.user_message)
+
+        if recipient_email and recipient_email.lower() in self._self_forward_addresses:
+            return WhitelistResult(action=EmailAction.newsletter, category=_FORWARDED_CATEGORY)
 
         sender_domain = email_lower.split("@")[-1] if "@" in email_lower else ""
 

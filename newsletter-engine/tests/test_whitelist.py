@@ -2,8 +2,17 @@ from config import EmailConfig, Settings, SourceRule, SourcesConfig
 from processing.whitelist import EmailAction, WhitelistFilter
 
 
-def make_filter(authorized_user: str = "user@personal.com", rules: list = None) -> WhitelistFilter:
-    settings = Settings(email=EmailConfig(authorized_user_address=authorized_user))
+def make_filter(
+    authorized_user: str = "user@personal.com",
+    rules: list = None,
+    self_forward_addresses: list = None,
+) -> WhitelistFilter:
+    settings = Settings(
+        email=EmailConfig(
+            authorized_user_address=authorized_user,
+            self_forward_addresses=self_forward_addresses or [],
+        )
+    )
     sources = SourcesConfig(sources=rules or [])
     return WhitelistFilter(settings, sources)
 
@@ -93,6 +102,38 @@ def test_domain_match_no_subdomain_bleed():
     rules = [SourceRule(match_domain="linkedin.com", category="market_signal")]
     result = make_filter(rules=rules).classify("jobs@mail.linkedin.com")
     assert result.action == EmailAction.ignored
+
+
+# --- Self-forward addresses (To: header) ---
+
+
+def test_self_forward_recipient_is_newsletter():
+    f = make_filter(self_forward_addresses=["relay@personal.com"])
+    result = f.classify("lex@sreweekly.com", "SRE Weekly Issue #519", "relay@personal.com")
+    assert result.action == EmailAction.newsletter
+    assert result.category == "forwarded_newsletter"
+
+
+def test_self_forward_recipient_case_insensitive():
+    f = make_filter(self_forward_addresses=["relay@personal.com"])
+    result = f.classify("lex@sreweekly.com", "SRE Weekly", "RELAY@PERSONAL.COM")
+    assert result.action == EmailAction.newsletter
+
+
+def test_self_forward_no_match_without_recipient():
+    f = make_filter(self_forward_addresses=["relay@personal.com"])
+    result = f.classify("lex@sreweekly.com", "SRE Weekly")
+    assert result.action == EmailAction.ignored
+
+
+def test_self_forward_does_not_shadow_authorized_user():
+    f = make_filter(
+        authorized_user="user@personal.com",
+        self_forward_addresses=["relay@personal.com"],
+    )
+    assert f.classify("user@personal.com", "Hello", "relay@personal.com").action == (
+        EmailAction.user_message
+    )
 
 
 # --- Priority & fallthrough ---

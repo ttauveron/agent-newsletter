@@ -16,6 +16,7 @@ class ParsedEmail:
     raw_content: str
     content_type: str  # "text/plain" or "text/html"
     rfc_message_id: Optional[str] = None  # RFC 2822 Message-ID header, used for reply threading
+    recipient_email: Optional[str] = None  # To: header, identifies auto-forwarded emails
 
 
 def _decode_part(part: dict) -> Optional[str]:
@@ -69,6 +70,8 @@ def parse_message(message: dict) -> ParsedEmail:
 
     raw_content, content_type = _extract_body(message["payload"])
 
+    _, to_email = parseaddr(headers.get("to", ""))
+
     return ParsedEmail(
         gmail_message_id=message["id"],
         gmail_thread_id=message.get("threadId", ""),
@@ -79,4 +82,5 @@ def parse_message(message: dict) -> ParsedEmail:
         raw_content=raw_content,
         content_type=content_type,
         rfc_message_id=headers.get("message-id"),
+        recipient_email=to_email.lower() or None,
     )
