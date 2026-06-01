@@ -168,6 +168,11 @@ Référence principale : [PLAN.md](PLAN.md) | [SPECS.md](SPECS.md) | [decisions_
 - **`gmail/poller.py`** : le sujet parsé est transmis au filtre de routage.
 - **Tests** : `test_whitelist.py` couvre les sujets transférés et les messages utilisateur normaux.
 
+### Correction locale — Digests vides ignorés ✅
+
+- **`scheduler.py`** : le job quotidien ne crée plus de digest et ne réveille plus Hermes lorsqu'aucun email n'est en état `ready_for_hermes`.
+- **Tests** : `test_scheduler.py` couvre le cas sans email prêt pour le digest.
+
 ### 3b — Flux digest journalier ✅ (validé 2026-05-30)
 
 ```

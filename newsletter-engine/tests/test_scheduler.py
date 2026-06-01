@@ -75,6 +75,7 @@ def test_run_daily_digest_creates_digest_and_wakes_hermes():
 
     session = MagicMock()
     session.execute.return_value.scalar_one_or_none.return_value = None
+    session.execute.return_value.scalars.return_value.first.return_value = MagicMock()
 
     with patch("scheduler.get_session", _mock_session_ctx(session)):
         with patch("scheduler._wake_hermes", AsyncMock()) as mock_wake:
@@ -93,6 +94,19 @@ def test_run_daily_digest_creates_digest_and_wakes_hermes():
 def test_run_daily_digest_skips_when_already_exists():
     session = MagicMock()
     session.execute.return_value.scalar_one_or_none.return_value = MagicMock()
+
+    with patch("scheduler.get_session", _mock_session_ctx(session)):
+        with patch("scheduler._wake_hermes", AsyncMock()) as mock_wake:
+            asyncio.run(_run_daily_digest())
+
+    session.add.assert_not_called()
+    mock_wake.assert_not_called()
+
+
+def test_run_daily_digest_skips_when_no_pending_emails():
+    session = MagicMock()
+    session.execute.return_value.scalar_one_or_none.return_value = None
+    session.execute.return_value.scalars.return_value.first.return_value = None
 
     with patch("scheduler.get_session", _mock_session_ctx(session)):
         with patch("scheduler._wake_hermes", AsyncMock()) as mock_wake:

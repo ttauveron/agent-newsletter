@@ -12,7 +12,15 @@ from openai import OpenAI
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from db.models import AppSetting, Digest, DigestState, UserMessage, UserMessageState
+from db.models import (
+    AppSetting,
+    Digest,
+    DigestState,
+    Email,
+    EmailState,
+    UserMessage,
+    UserMessageState,
+)
 from db.session import get_session
 from gmail.client import GmailClient
 from gmail.poller import poll as gmail_poll
@@ -71,6 +79,16 @@ async def _run_daily_digest() -> None:
             logger.info(
                 "Digest for %s already exists (state: %s)", today, existing.processing_state
             )
+            return
+        has_emails = (
+            session.execute(
+                select(Email).where(Email.processing_state == EmailState.ready_for_hermes)
+            )
+            .scalars()
+            .first()
+        )
+        if not has_emails:
+            logger.info("No emails ready for digest on %s, skipping", today)
             return
         session.add(Digest(digest_date=today, processing_state=DigestState.digest_due))
     logger.info("Digest created for %s, notifying Hermes", today)
